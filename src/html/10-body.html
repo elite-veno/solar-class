@@ -1,0 +1,193 @@
+<a class="skip-link" href="#timeline">Naar de tijdlijn</a>
+<div id="app">
+  <div id="viewport" aria-label="3D-weergave van de ster. Sleep om te draaien, scroll of knijp om te zoomen." role="img"></div>
+  <div id="labels" aria-label="Aanklikbare onderdelen in beeld"></div>
+  <div id="fade" aria-hidden="true"></div>
+  <div id="flash" aria-hidden="true"></div>
+
+  <header id="topbar" class="glass">
+    <button id="btn-menu" class="icon-btn only-mobile" aria-label="Menu openen" aria-expanded="false" aria-controls="modes">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+    </button>
+    <div class="brand">
+      <span class="brand-star" aria-hidden="true"></span>
+      <span class="brand-text">Het leven van sterren</span>
+    </div>
+    <nav id="modes" aria-label="Onderdelen">
+      <button class="mode-btn" data-mode="levensloop" aria-pressed="true"><span class="k">1</span>Levensloop</button>
+      <button class="mode-btn" data-mode="eindproducten" aria-pressed="false"><span class="k">2</span>Eindproducten</button>
+      <button class="mode-btn" data-mode="binnenkant" aria-pressed="false"><span class="k">3</span>Binnenkant</button>
+      <button class="mode-btn" data-toggle="hr" aria-pressed="false"><span class="k">4</span>HR-diagram</button>
+      <button class="mode-btn" data-toggle="classificatie" aria-pressed="false"><span class="k">5</span>Classificatie</button>
+      <button class="mode-btn" data-mode="vergelijken" aria-pressed="false"><span class="k">6</span>Vergelijken</button>
+      <button class="mode-btn" data-mode="rondleiding" aria-pressed="false"><span class="k">7</span>Rondleiding</button>
+      <button class="mode-btn" data-toggle="quiz" aria-pressed="false"><span class="k">8</span>Quiz</button>
+    </nav>
+    <div class="top-actions">
+      <button id="btn-objects" class="icon-btn" aria-label="Aanklikbare objecten in beeld" aria-expanded="false" aria-controls="objects-panel" title="In beeld (O)">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8" stroke-dasharray="3 3"/></svg>
+      </button>
+      <button id="btn-settings" class="icon-btn" aria-label="Instellingen" aria-haspopup="dialog" title="Instellingen">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Z"/><path d="M19.4 13.5a7.6 7.6 0 0 0 0-3l2-1.6-2-3.4-2.4 1a7.4 7.4 0 0 0-2.6-1.5L14 2.5h-4l-.4 2.5A7.4 7.4 0 0 0 7 6.5l-2.4-1-2 3.4 2 1.6a7.6 7.6 0 0 0 0 3l-2 1.6 2 3.4 2.4-1a7.4 7.4 0 0 0 2.6 1.5l.4 2.5h4l.4-2.5a7.4 7.4 0 0 0 2.6-1.5l2.4 1 2-3.4Z"/></svg>
+      </button>
+      <button id="btn-help" class="icon-btn" aria-label="Hulp en sneltoetsen" aria-haspopup="dialog" title="Hulp (?)">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.3a2.6 2.6 0 0 1 5 .9c0 1.8-2.5 2.2-2.5 3.8M12 17.2v.1"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <section id="caption" class="glass" aria-live="polite">
+    <div class="cap-kicker" id="cap-kicker"></div>
+    <h1 class="cap-title" id="cap-title">Het leven van sterren</h1>
+    <p class="cap-sub" id="cap-sub"></p>
+    <div class="cap-badges" id="cap-badges"></div>
+    <button class="cap-more link-btn" id="cap-more">Lees meer</button>
+  </section>
+
+  <section id="mass-panel" class="glass" aria-label="Beginmassa van de ster">
+    <div class="mp-head">
+      <label for="mass-slider" class="mp-label">Beginmassa</label>
+      <output id="mass-value" for="mass-slider">1,00 M☉</output>
+      <button class="icon-btn small mp-collapse" id="mass-collapse" aria-label="Paneel inklappen" aria-expanded="true">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 15l6-6 6 6"/></svg>
+      </button>
+    </div>
+    <div class="mp-body" id="mass-body">
+      <input type="range" id="mass-slider" min="0" max="1000" step="1" value="500" aria-describedby="mass-fate">
+      <div class="mp-scale" aria-hidden="true"><span>0,01</span><span>0,1</span><span>1</span><span>10</span><span>150</span></div>
+      <div class="mp-presets" id="mass-presets" role="group" aria-label="Snelkeuze massa"></div>
+      <label class="check"><input type="checkbox" id="lowz"> <span>Laag metaalgehalte (vroeg heelal)</span></label>
+      <div class="mp-fate" id="mass-fate"></div>
+      <p class="mp-note" id="mass-note"></p>
+    </div>
+  </section>
+
+  <aside id="info-panel" class="glass" aria-label="Uitleg" aria-hidden="true" tabindex="-1">
+    <div class="ip-scroll" id="ip-scroll"></div>
+    <button class="icon-btn ip-close" id="ip-close" aria-label="Uitleg sluiten (Esc)">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+    </button>
+  </aside>
+
+  <section id="hr-panel" class="glass floating-panel" aria-label="Hertzsprung-Russelldiagram" hidden>
+    <div class="fp-head">
+      <h2>Hertzsprung-Russelldiagram</h2>
+      <button class="icon-btn small" data-expand="hr-panel" aria-label="Groter/kleiner">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10V4h6M20 14v6h-6M4 4l6 6M20 20l-6-6"/></svg>
+      </button>
+      <button class="icon-btn small" data-close="hr" aria-label="HR-diagram sluiten">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </div>
+    <div class="fp-body" id="hr-body"></div>
+  </section>
+
+  <section id="class-panel" class="glass overlay-panel" aria-label="Classificatie van sterren" hidden>
+    <div class="op-head">
+      <h2>Classificatie van sterren</h2>
+      <button class="icon-btn" data-close="classificatie" aria-label="Classificatie sluiten">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </div>
+    <div class="op-body" id="class-body"></div>
+  </section>
+
+  <section id="gallery-panel" class="glass overlay-panel" aria-label="Stellaire eindproducten" hidden>
+    <div class="op-head">
+      <h2>Stellaire eindproducten</h2>
+      <button class="icon-btn" data-close="gallery" aria-label="Overzicht sluiten">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </div>
+    <div class="op-body" id="gallery-body"></div>
+  </section>
+
+  <section id="compare-panel" class="glass" aria-label="Vergelijkingsmodus" hidden></section>
+  <section id="tour-card" class="glass" aria-label="Rondleiding" aria-live="polite" hidden></section>
+
+  <div id="objects-panel" class="glass dropdown" hidden>
+    <h2 class="dd-title">In beeld</h2>
+    <p class="dd-hint">Alles in deze scène is aanklikbaar. Kies een onderdeel voor uitleg.</p>
+    <ul id="objects-list"></ul>
+  </div>
+
+  <footer id="timeline" class="glass" aria-label="Tijdlijn" tabindex="-1">
+    <div class="tl-controls">
+      <button id="tl-prev" class="icon-btn" aria-label="Vorige fase (←)" title="Vorige fase (←)">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+      </button>
+      <button id="tl-play" class="icon-btn play" aria-label="Afspelen (spatie)" title="Afspelen/pauzeren (spatie)">
+        <svg class="i-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l10.5-6.5Z"/></svg>
+        <svg class="i-pause" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg>
+      </button>
+      <button id="tl-next" class="icon-btn" aria-label="Volgende fase (→)" title="Volgende fase (→)">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+      </button>
+      <div class="tl-speed">
+        <label for="tl-speed-slider">Snelheid</label>
+        <input type="range" id="tl-speed-slider" min="0" max="9" step="0.25" value="6" aria-valuetext="1 seconde is 1 miljoen jaar">
+        <output id="tl-speed-value">1 s = 1 miljoen jaar</output>
+      </div>
+      <div class="tl-age" aria-live="off">
+        <span class="tl-age-label">Leeftijd</span>
+        <output id="tl-age-value">0 jaar</output>
+      </div>
+      <span class="badge badge-time" id="tl-accel" title="De tijd loopt veel sneller dan in het echt">Tijd versneld</span>
+    </div>
+    <div class="tl-track-wrap">
+      <ol id="tl-chips" class="tl-chips" aria-label="Fasen"></ol>
+    </div>
+  </footer>
+
+  <div id="tooltip" role="tooltip" hidden></div>
+
+  <dialog id="settings-dialog" class="glass dialog" aria-labelledby="settings-title">
+    <form method="dialog">
+      <h2 id="settings-title">Instellingen</h2>
+      <fieldset>
+        <legend>Kwaliteit</legend>
+        <div class="seg" role="radiogroup" aria-label="Kwaliteit">
+          <label><input type="radio" name="quality" value="laag"> <span>Laag</span></label>
+          <label><input type="radio" name="quality" value="middel"> <span>Middel</span></label>
+          <label><input type="radio" name="quality" value="hoog"> <span>Hoog</span></label>
+        </div>
+        <p class="hint">Laag: minder deeltjes en effecten, voor oudere laptops en telefoons.</p>
+      </fieldset>
+      <fieldset>
+        <legend>Weergave</legend>
+        <label class="check"><input type="checkbox" id="set-reduced"> <span>Minder beweging (geen flitsen, geen automatisch draaien)</span></label>
+        <label class="check"><input type="checkbox" id="set-labels"> <span>Labels in de 3D-scène tonen</span></label>
+        <label class="check"><input type="checkbox" id="set-autorotate"> <span>Camera langzaam laten draaien</span></label>
+        <label class="check"><input type="checkbox" id="set-fps"> <span>Beeldsnelheid (fps) tonen</span></label>
+      </fieldset>
+      <div class="dialog-actions"><button class="btn primary" value="ok">Sluiten</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="help-dialog" class="glass dialog" aria-labelledby="help-title">
+    <form method="dialog">
+      <h2 id="help-title">Zo werkt het</h2>
+      <div id="help-body"></div>
+      <div class="dialog-actions"><button class="btn primary" value="ok">Begrepen</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="quiz-dialog" class="glass dialog wide" aria-labelledby="quiz-title">
+    <div class="quiz-head">
+      <h2 id="quiz-title">Quiz: het leven van sterren</h2>
+      <button class="icon-btn" data-close="quiz" aria-label="Quiz sluiten">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </div>
+    <div id="quiz-body"></div>
+  </dialog>
+
+  <div id="fps" hidden>– fps</div>
+  <div id="toast" role="status" aria-live="polite" hidden></div>
+
+  <div id="loading" aria-live="polite">
+    <div class="ld-star" aria-hidden="true"></div>
+    <p>Sterren worden geboren…</p>
+  </div>
+  <noscript><div class="fatal">Deze simulatie heeft JavaScript nodig.</div></noscript>
+</div>

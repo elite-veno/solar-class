@@ -1,0 +1,3018 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Interactieve 3D-simulatie over het leven van sterren: van gaswolk tot witte dwerg, neutronenster en zwart gat.">
+<meta name="theme-color" content="#05060d">
+<title>Het leven van sterren</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3CradialGradient id='g'%3E%3Cstop offset='0' stop-color='%23fff7e0'/%3E%3Cstop offset='.45' stop-color='%23ffc860'/%3E%3Cstop offset='1' stop-color='%23ff7a1a' stop-opacity='0'/%3E%3C/radialGradient%3E%3C/defs%3E%3Ccircle cx='32' cy='32' r='30' fill='url(%23g)'/%3E%3C/svg%3E">
+<style>
+/* ---- 00-base.css ---- */
+:root {
+  --bg: #04050b;
+  --glass: rgba(11, 14, 28, 0.72);
+  --glass-strong: rgba(10, 13, 26, 0.88);
+  --glass-border: rgba(170, 190, 255, 0.12);
+  --glass-hi: rgba(255, 255, 255, 0.06);
+  --text: #edf0fa;
+  --text-dim: #a9b2cc;
+  --text-faint: #7c86a3;
+  --accent: #ffc66e;
+  --accent-2: #86c8ff;
+  --accent-3: #c79bff;
+  --ok: #7be0a6;
+  --warn: #ffb35c;
+  --bad: #ff7b7b;
+  --focus: #9fd3ff;
+  --radius: 16px;
+  --radius-sm: 10px;
+  --shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+  --font: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-head: 'Space Grotesk', 'Inter', system-ui, sans-serif;
+  --top-h: 56px;
+  --tl-h: 112px;
+  --gap: 12px;
+  --info-w: 410px;
+  --ease: cubic-bezier(.2, .8, .2, 1);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font-family: var(--font); font-size: 15px; line-height: 1.5; -webkit-font-smoothing: antialiased; overflow: hidden; }
+body { overscroll-behavior: none; touch-action: manipulation; }
+button, input, select { font: inherit; color: inherit; }
+h1, h2, h3, h4 { font-family: var(--font-head); font-weight: 600; letter-spacing: -0.01em; margin: 0; }
+a { color: var(--accent-2); }
+sub, sup { font-size: .72em; line-height: 0; }
+[hidden] { display: none !important; }
+:focus { outline: none; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 6px; }
+::selection { background: rgba(134, 200, 255, .35); }
+
+.skip-link { position: fixed; left: 12px; top: -60px; z-index: 100; background: var(--accent); color: #111; padding: 8px 14px; border-radius: 8px; font-weight: 600; transition: top .2s; }
+.skip-link:focus { top: 12px; }
+
+#app { position: fixed; inset: 0; }
+#viewport { position: absolute; inset: 0; }
+#viewport canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+#viewport.hovering canvas { cursor: pointer; }
+#fade { position: absolute; inset: 0; background: #000; opacity: 0; pointer-events: none; transition: opacity .45s ease; z-index: 5; }
+#fade.on { opacity: 1; }
+#flash { position: absolute; inset: 0; background: radial-gradient(circle at 50% 50%, #fff 0%, rgba(255, 240, 210, .85) 30%, rgba(255, 210, 150, 0) 75%); opacity: 0; pointer-events: none; z-index: 6; }
+
+/* ---------- glass ---------- */
+.glass {
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow), inset 0 1px 0 var(--glass-hi);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  backdrop-filter: blur(18px) saturate(140%);
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass { background: var(--glass-strong); }
+}
+
+/* ---------- buttons & controls ---------- */
+.icon-btn { display: inline-grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; border: 1px solid transparent; background: rgba(255, 255, 255, 0.04); cursor: pointer; transition: background .2s, border-color .2s, transform .15s; flex: none; padding: 0; }
+.icon-btn:hover { background: rgba(255, 255, 255, 0.1); border-color: var(--glass-border); }
+.icon-btn:active { transform: scale(.95); }
+.icon-btn.small { width: 32px; height: 32px; border-radius: 9px; }
+.icon-btn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.icon-btn.small svg { width: 16px; height: 16px; }
+.icon-btn[aria-expanded="true"], .icon-btn[aria-pressed="true"] { background: rgba(134, 200, 255, 0.16); border-color: rgba(134, 200, 255, 0.35); }
+
+.btn { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 8px 16px; border-radius: 12px; border: 1px solid var(--glass-border); background: rgba(255, 255, 255, 0.06); cursor: pointer; font-weight: 500; transition: background .2s, border-color .2s, transform .15s; text-decoration: none; color: var(--text); }
+.btn:hover { background: rgba(255, 255, 255, 0.12); }
+.btn:active { transform: scale(.97); }
+.btn.primary { background: linear-gradient(135deg, #ffd488, #ffab52); color: #1c1203; border-color: transparent; font-weight: 600; }
+.btn.primary:hover { filter: brightness(1.08); }
+.btn.ghost { background: transparent; }
+.btn.small { min-height: 32px; padding: 4px 12px; font-size: 13px; border-radius: 10px; }
+.btn[disabled] { opacity: .4; cursor: not-allowed; }
+.btn svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.link-btn { background: none; border: 0; padding: 0; color: var(--accent-2); cursor: pointer; font-size: 13px; font-weight: 500; }
+.link-btn:hover { text-decoration: underline; }
+
+.check { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; font-size: 14px; color: var(--text-dim); padding: 4px 0; }
+.check input { width: 18px; height: 18px; accent-color: var(--accent); margin: 2px 0 0; flex: none; }
+
+input[type="range"] { -webkit-appearance: none; appearance: none; width: 100%; height: 28px; background: transparent; cursor: pointer; }
+input[type="range"]::-webkit-slider-runnable-track { height: 6px; border-radius: 3px; background: linear-gradient(90deg, rgba(134, 200, 255, .5), rgba(255, 198, 110, .6)); }
+input[type="range"]::-moz-range-track { height: 6px; border-radius: 3px; background: linear-gradient(90deg, rgba(134, 200, 255, .5), rgba(255, 198, 110, .6)); }
+input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; border-radius: 50%; background: #fff; margin-top: -7px; box-shadow: 0 0 0 4px rgba(255, 198, 110, .28), 0 2px 8px rgba(0, 0, 0, .5); }
+input[type="range"]::-moz-range-thumb { width: 20px; height: 20px; border-radius: 50%; background: #fff; border: 0; box-shadow: 0 0 0 4px rgba(255, 198, 110, .28); }
+input[type="range"]:focus-visible { outline: 2px solid var(--focus); outline-offset: 4px; }
+
+.seg { display: flex; gap: 4px; background: rgba(255, 255, 255, .05); padding: 4px; border-radius: 12px; }
+.seg label { flex: 1; position: relative; }
+.seg input { position: absolute; opacity: 0; inset: 0; cursor: pointer; }
+.seg span { display: block; text-align: center; padding: 7px 10px; border-radius: 9px; font-size: 14px; color: var(--text-dim); transition: background .2s, color .2s; }
+.seg input:checked + span { background: rgba(255, 198, 110, .2); color: var(--text); box-shadow: inset 0 0 0 1px rgba(255, 198, 110, .45); }
+.seg input:focus-visible + span { outline: 2px solid var(--focus); }
+
+.badge { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; padding: 3px 9px; border-radius: 99px; border: 1px solid; white-space: nowrap; }
+.badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.badge-scale { color: #ffcf8a; border-color: rgba(255, 207, 138, .35); background: rgba(255, 207, 138, .08); }
+.badge-time { color: #9fd3ff; border-color: rgba(159, 211, 255, .35); background: rgba(159, 211, 255, .08); }
+.badge-obs { color: #86e3ae; border-color: rgba(134, 227, 174, .35); background: rgba(134, 227, 174, .08); }
+.badge-theory { color: #d3adff; border-color: rgba(211, 173, 255, .38); background: rgba(211, 173, 255, .08); }
+.badge-partial { color: #ffd98a; border-color: rgba(255, 217, 138, .35); background: rgba(255, 217, 138, .08); }
+.badge-slow { color: #ffb0c8; border-color: rgba(255, 176, 200, .35); background: rgba(255, 176, 200, .08); }
+
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; margin: 0; font-size: 14px; }
+.kv dt { color: var(--text-dim); }
+.kv dd { margin: 0; font-weight: 500; text-align: right; font-variant-numeric: tabular-nums; }
+.formula { font-family: 'Cambria Math', 'STIX Two Math', 'Times New Roman', serif; font-style: italic; font-size: 1.08em; padding: 1px 6px; background: rgba(255, 255, 255, .06); border-radius: 6px; white-space: nowrap; }
+.formula-block { display: block; text-align: center; font-family: 'Cambria Math', 'STIX Two Math', 'Times New Roman', serif; font-style: italic; font-size: 1.2em; padding: 10px; margin: 10px 0; background: rgba(255, 255, 255, .05); border-radius: 10px; border: 1px solid var(--glass-border); overflow-x: auto; }
+.hint { font-size: 13px; color: var(--text-faint); margin: 6px 0 0; }
+.muted { color: var(--text-dim); }
+
+/* ---------- top bar ---------- */
+#topbar { position: absolute; top: var(--gap); left: var(--gap); right: var(--gap); height: var(--top-h); display: flex; align-items: center; gap: 12px; padding: 0 8px 0 14px; z-index: 30; }
+.brand { display: flex; align-items: center; gap: 10px; font-family: var(--font-head); font-weight: 600; font-size: 17px; white-space: nowrap; }
+.brand-star { width: 22px; height: 22px; border-radius: 50%; background: radial-gradient(circle, #fff8e2 0%, #ffcb6b 40%, rgba(255, 130, 40, 0) 72%); box-shadow: 0 0 18px rgba(255, 190, 90, .7); }
+#modes { display: flex; gap: 2px; margin: 0 auto; overflow-x: auto; scrollbar-width: none; }
+#modes::-webkit-scrollbar { display: none; }
+.mode-btn { background: none; border: 0; padding: 8px 12px; border-radius: 10px; cursor: pointer; color: var(--text-dim); font-weight: 500; font-size: 14px; white-space: nowrap; transition: background .2s, color .2s; display: flex; align-items: center; gap: 6px; }
+.mode-btn .k { font-size: 10px; color: var(--text-faint); border: 1px solid rgba(255, 255, 255, .14); border-radius: 4px; padding: 0 4px; line-height: 14px; }
+.mode-btn:hover { color: var(--text); background: rgba(255, 255, 255, .06); }
+.mode-btn[aria-pressed="true"] { color: var(--text); background: rgba(255, 198, 110, .14); box-shadow: inset 0 0 0 1px rgba(255, 198, 110, .35); }
+.top-actions { display: flex; gap: 4px; }
+.only-mobile { display: none !important; }
+
+/* ---------- caption ---------- */
+#caption { position: absolute; top: calc(var(--top-h) + var(--gap) * 2); left: var(--gap); width: 340px; padding: 14px 16px 12px; z-index: 20; transition: opacity .35s, transform .35s var(--ease); }
+#caption.changing { opacity: 0; transform: translateY(-6px); }
+.cap-kicker { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); font-weight: 600; min-height: 16px; }
+.cap-title { font-size: 22px; line-height: 1.2; margin: 2px 0 4px; }
+.cap-sub { margin: 0 0 8px; color: var(--text-dim); font-size: 14px; }
+.cap-badges { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
+.cap-badges:empty { display: none; }
+
+/* ---------- mass panel ---------- */
+#mass-panel { position: absolute; left: var(--gap); bottom: calc(var(--tl-h) + var(--gap) * 2); width: 340px; padding: 12px 16px; z-index: 20; }
+.mp-head { display: flex; align-items: center; gap: 10px; }
+.mp-label { font-family: var(--font-head); font-weight: 600; }
+#mass-value { margin-left: auto; font-weight: 700; font-size: 18px; color: var(--accent); font-variant-numeric: tabular-nums; }
+.mp-collapse svg { transition: transform .25s; }
+#mass-panel.collapsed .mp-collapse svg { transform: rotate(180deg); }
+#mass-panel.collapsed .mp-body { display: none; }
+.mp-body { margin-top: 6px; }
+.mp-scale { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-faint); margin: -2px 2px 8px; }
+.mp-presets { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 8px; }
+.mp-presets button { background: rgba(255, 255, 255, .05); border: 1px solid var(--glass-border); border-radius: 99px; padding: 3px 10px; font-size: 12px; cursor: pointer; color: var(--text-dim); }
+.mp-presets button:hover, .mp-presets button[aria-pressed="true"] { color: var(--text); border-color: rgba(255, 198, 110, .5); background: rgba(255, 198, 110, .1); }
+.mp-fate { margin-top: 8px; font-size: 13.5px; line-height: 1.45; }
+.mp-fate .fate-cat { font-weight: 600; color: var(--text); }
+.mp-fate .fate-path { color: var(--text-dim); display: block; margin-top: 3px; }
+.mp-note { font-size: 12px; color: var(--text-faint); margin: 8px 0 0; }
+
+/* ---------- info panel ---------- */
+#info-panel { position: absolute; top: calc(var(--top-h) + var(--gap) * 2); right: var(--gap); bottom: calc(var(--tl-h) + var(--gap) * 2); width: var(--info-w); z-index: 25; transform: translateX(calc(100% + 40px)); opacity: 0; transition: transform .45s var(--ease), opacity .3s; display: flex; flex-direction: column; background: var(--glass-strong); }
+#info-panel.open { transform: none; opacity: 1; }
+.ip-scroll { overflow-y: auto; padding: 22px 22px 18px; flex: 1; scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, .2) transparent; }
+.ip-close { position: absolute; top: 12px; right: 12px; }
+.ip-kicker { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); font-weight: 600; margin-right: 44px; }
+.ip-title { font-size: 25px; line-height: 1.2; margin: 4px 44px 10px 0; }
+.ip-badges { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+.ip-body p { margin: 0 0 12px; color: #dfe4f2; }
+.ip-card { background: rgba(255, 255, 255, .045); border: 1px solid var(--glass-border); border-radius: 14px; padding: 12px 14px; margin: 14px 0; }
+.ip-card h3 { font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 8px; font-family: var(--font); font-weight: 600; }
+.ip-fact { background: linear-gradient(135deg, rgba(255, 198, 110, .13), rgba(255, 198, 110, .04)); border-color: rgba(255, 198, 110, .3); }
+.ip-fact h3 { color: var(--accent); }
+.ip-fact p { margin: 0; }
+.ip-deeper { margin: 14px 0; border: 1px solid var(--glass-border); border-radius: 14px; background: rgba(134, 200, 255, .05); }
+.ip-deeper summary { cursor: pointer; padding: 12px 14px; font-weight: 600; list-style: none; display: flex; align-items: center; gap: 8px; }
+.ip-deeper summary::-webkit-details-marker { display: none; }
+.ip-deeper summary::before { content: '▸'; color: var(--accent-2); transition: transform .2s; display: inline-block; }
+.ip-deeper[open] summary::before { transform: rotate(90deg); }
+.ip-deeper .deeper-body { padding: 0 14px 12px; font-size: 14px; color: #d6dcec; }
+.ip-deeper .deeper-body p { margin: 0 0 10px; }
+.ip-nav { display: flex; gap: 8px; flex-wrap: wrap; padding: 12px 22px 16px; border-top: 1px solid var(--glass-border); }
+.ip-nav .btn { flex: 1 1 auto; justify-content: center; }
+.ip-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 4px; }
+.ip-related { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.ip-related button { background: rgba(255, 255, 255, .05); border: 1px solid var(--glass-border); border-radius: 99px; padding: 3px 11px; font-size: 12.5px; cursor: pointer; color: var(--text-dim); }
+.ip-related button:hover { color: var(--text); border-color: rgba(134, 200, 255, .5); }
+
+/* ---------- floating + overlay panels ---------- */
+.floating-panel { position: absolute; right: var(--gap); bottom: calc(var(--tl-h) + var(--gap) * 2); width: 440px; height: 380px; z-index: 22; display: flex; flex-direction: column; transition: right .45s var(--ease), width .3s, height .3s; }
+body.info-open .floating-panel { right: calc(var(--info-w) + var(--gap) * 2); }
+.floating-panel.expanded { width: min(820px, calc(100vw - 2 * var(--gap))); height: min(620px, calc(100vh - var(--top-h) - var(--tl-h) - 5 * var(--gap))); }
+.fp-head { display: flex; align-items: center; gap: 6px; padding: 8px 8px 4px 14px; }
+.fp-head h2 { font-size: 14px; margin-right: auto; }
+.fp-body { flex: 1; min-height: 0; position: relative; padding: 0 8px 8px; }
+
+.overlay-panel { position: absolute; top: calc(var(--top-h) + var(--gap) * 2); left: 50%; transform: translateX(-50%); width: min(1100px, calc(100vw - 2 * var(--gap))); bottom: calc(var(--tl-h) + var(--gap) * 2); z-index: 40; display: flex; flex-direction: column; background: var(--glass-strong); animation: panelIn .4s var(--ease); }
+@keyframes panelIn { from { opacity: 0; transform: translate(-50%, 10px); } to { opacity: 1; transform: translate(-50%, 0); } }
+.op-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 14px 8px 22px; border-bottom: 1px solid var(--glass-border); }
+.op-head h2 { font-size: 20px; }
+.op-body { overflow-y: auto; padding: 18px 22px 22px; flex: 1; scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, .2) transparent; }
+
+/* gallery */
+.gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px; }
+.g-card { text-align: left; border: 1px solid var(--glass-border); border-radius: 16px; padding: 0; background: rgba(255, 255, 255, .04); cursor: pointer; overflow: hidden; transition: transform .25s var(--ease), border-color .2s, background .2s; display: flex; flex-direction: column; }
+.g-card:hover { transform: translateY(-3px); border-color: rgba(255, 198, 110, .45); background: rgba(255, 255, 255, .07); }
+.g-card .g-art { height: 110px; position: relative; overflow: hidden; }
+.g-card .g-art::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 40%, rgba(8, 10, 20, .7)); }
+.g-card .g-txt { padding: 10px 14px 14px; }
+.g-card h3 { font-size: 16px; margin-bottom: 4px; }
+.g-card p { margin: 0; font-size: 13px; color: var(--text-dim); }
+.g-card .badge { margin-top: 8px; }
+.g-section { margin: 4px 0 12px; font-size: 13px; letter-spacing: .1em; text-transform: uppercase; color: var(--text-faint); }
+.g-section:not(:first-child) { margin-top: 24px; }
+
+/* objects dropdown */
+.dropdown { position: absolute; top: calc(var(--top-h) + var(--gap) * 2); right: var(--gap); width: 300px; max-height: 60vh; overflow-y: auto; z-index: 35; padding: 14px; background: var(--glass-strong); }
+.dd-title { font-size: 15px; }
+.dd-hint { font-size: 12.5px; color: var(--text-faint); margin: 4px 0 8px; }
+#objects-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+#objects-list button { width: 100%; text-align: left; background: rgba(255, 255, 255, .04); border: 1px solid transparent; border-radius: 10px; padding: 8px 10px; cursor: pointer; }
+#objects-list button:hover, #objects-list button:focus-visible { border-color: rgba(134, 200, 255, .4); background: rgba(134, 200, 255, .08); }
+#objects-list .ol-sub { display: block; font-size: 12px; color: var(--text-faint); }
+
+/* ---------- timeline ---------- */
+#timeline { position: absolute; left: var(--gap); right: var(--gap); bottom: var(--gap); min-height: var(--tl-h); z-index: 30; padding: 8px 12px 10px; display: flex; flex-direction: column; gap: 6px; }
+.tl-controls { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+#tl-play { width: 46px; height: 46px; border-radius: 50%; background: linear-gradient(135deg, #ffd488, #ffab52); color: #1c1203; }
+#tl-play svg { stroke-width: 2.2; }
+#tl-play .i-play { fill: currentColor; }
+#tl-play .i-pause { display: none; }
+#tl-play.playing .i-play { display: none; }
+#tl-play.playing .i-pause { display: block; }
+.tl-speed { display: flex; align-items: center; gap: 10px; margin-left: 10px; min-width: 300px; flex: 0 1 420px; }
+.tl-speed label { font-size: 13px; color: var(--text-dim); }
+.tl-speed input { flex: 1; min-width: 110px; }
+#tl-speed-value { font-size: 13px; min-width: 150px; font-variant-numeric: tabular-nums; }
+.tl-age { margin-left: auto; display: flex; align-items: baseline; gap: 8px; padding: 4px 12px; border-radius: 10px; background: rgba(255, 255, 255, .05); }
+.tl-age-label { font-size: 12px; color: var(--text-dim); text-transform: uppercase; letter-spacing: .08em; }
+#tl-age-value { font-family: var(--font-head); font-weight: 600; font-size: 18px; min-width: 150px; text-align: right; font-variant-numeric: tabular-nums; }
+.tl-track-wrap { overflow-x: auto; scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, .2) transparent; padding-bottom: 2px; }
+.tl-chips { list-style: none; margin: 0; padding: 0; display: flex; gap: 4px; min-width: max-content; }
+.tl-chip { position: relative; }
+.tl-chip button { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 0; min-width: 96px; padding: 5px 10px 7px; border-radius: 10px; background: rgba(255, 255, 255, .04); border: 1px solid transparent; cursor: pointer; color: var(--text-dim); overflow: hidden; text-align: left; }
+.tl-chip button:hover { color: var(--text); background: rgba(255, 255, 255, .08); }
+.tl-chip .n { font-size: 10px; color: var(--text-faint); letter-spacing: .06em; text-transform: uppercase; }
+.tl-chip .l { font-size: 13px; font-weight: 500; white-space: nowrap; }
+.tl-chip .bar { position: absolute; left: 0; bottom: 0; height: 3px; width: 0; background: linear-gradient(90deg, var(--accent-2), var(--accent)); }
+.tl-chip.done button { color: var(--text); }
+.tl-chip.done .bar { width: 100%; opacity: .45; }
+.tl-chip.active button { color: var(--text); background: rgba(255, 198, 110, .13); border-color: rgba(255, 198, 110, .45); }
+.tl-chip.formation .n::after { content: ' · vorming'; }
+.tl-chip.sep { width: 1px; background: var(--glass-border); margin: 4px 4px; }
+
+/* ---------- tooltip ---------- */
+#tooltip { position: absolute; z-index: 60; pointer-events: none; max-width: 280px; padding: 9px 12px; border-radius: 12px; background: rgba(10, 13, 26, .92); border: 1px solid var(--glass-border); box-shadow: 0 10px 30px rgba(0, 0, 0, .5); font-size: 13px; transform: translate(14px, 14px); }
+#tooltip b { display: block; font-family: var(--font-head); font-size: 14px; margin-bottom: 2px; }
+#tooltip .tt-hint { display: block; color: var(--accent-2); font-size: 11.5px; margin-top: 4px; }
+
+/* ---------- 3D labels ---------- */
+#labels { position: absolute; inset: 0; pointer-events: none; z-index: 10; overflow: hidden; }
+.scene-label { position: absolute; left: 0; top: 0; pointer-events: auto; transform: translate(-50%, -50%); background: rgba(10, 13, 26, .6); border: 1px solid rgba(255, 255, 255, .18); color: var(--text); border-radius: 99px; padding: 3px 10px 3px 8px; font-size: 12.5px; font-weight: 500; white-space: nowrap; cursor: pointer; display: flex; align-items: center; gap: 6px; -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); transition: background .2s, border-color .2s, opacity .3s; will-change: transform; }
+.scene-label::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--dot, var(--accent)); box-shadow: 0 0 8px var(--dot, var(--accent)); }
+.scene-label:hover, .scene-label:focus-visible, .scene-label.hot { background: rgba(255, 198, 110, .22); border-color: rgba(255, 198, 110, .6); }
+.scene-label.behind { opacity: 0; pointer-events: none; }
+body.no-labels .scene-label:not(.always) { display: none; }
+
+/* scene HUD (phase captions, counters) — created with BaseScene.setHud() */
+.scene-hud { position: absolute; top: calc(var(--top-h) + var(--gap) * 2); left: 50%; transform: translateX(-50%); max-width: min(460px, calc(100vw - 760px)); min-width: 220px; padding: 9px 14px; border-radius: 14px; background: rgba(10, 13, 26, .72); border: 1px solid var(--glass-border); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); font-size: 13.5px; text-align: center; pointer-events: auto; z-index: 12; box-shadow: var(--shadow); }
+.scene-hud.hud-wide { max-width: min(620px, calc(100vw - 760px)); }
+.scene-hud b, .scene-hud strong { color: var(--accent); font-family: var(--font-head); }
+.scene-hud .hud-row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+.scene-hud .hud-step { opacity: .45; } .scene-hud .hud-step.on { opacity: 1; color: var(--accent); }
+
+/* ---------- dialogs ---------- */
+dialog.dialog { color: var(--text); padding: 0; border: 1px solid var(--glass-border); max-width: min(560px, calc(100vw - 24px)); width: 100%; background: var(--glass-strong); }
+dialog.dialog.wide { max-width: min(760px, calc(100vw - 24px)); }
+dialog.dialog::backdrop { background: rgba(2, 3, 8, .55); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); }
+dialog.dialog form, dialog.dialog > div { padding: 22px 24px; }
+dialog.dialog h2 { font-size: 22px; margin-bottom: 12px; }
+dialog fieldset { border: 1px solid var(--glass-border); border-radius: 12px; margin: 0 0 14px; padding: 10px 14px 12px; }
+dialog legend { padding: 0 6px; font-weight: 600; font-size: 14px; }
+.dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
+.quiz-head { display: flex; align-items: center; justify-content: space-between; padding: 18px 20px 0 24px !important; }
+.quiz-head h2 { margin: 0 !important; }
+.help-grid { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; font-size: 14px; margin: 8px 0 14px; }
+kbd { font-family: ui-monospace, monospace; font-size: 12px; padding: 2px 7px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, .25); background: rgba(255, 255, 255, .06); white-space: nowrap; }
+
+/* ---------- misc ---------- */
+#fps { position: absolute; left: 50%; top: calc(var(--top-h) + var(--gap) * 2); transform: translateX(-50%); z-index: 50; font: 600 12px ui-monospace, monospace; background: rgba(0, 0, 0, .55); padding: 3px 8px; border-radius: 6px; color: #9fe8b8; }
+#toast { position: absolute; left: 50%; bottom: calc(var(--tl-h) + var(--gap) * 3); transform: translateX(-50%); z-index: 70; background: rgba(12, 15, 28, .92); border: 1px solid var(--glass-border); border-radius: 12px; padding: 10px 16px; font-size: 14px; box-shadow: var(--shadow); max-width: min(520px, 90vw); text-align: center; }
+#loading { position: absolute; inset: 0; z-index: 90; display: grid; place-content: center; justify-items: center; gap: 14px; background: radial-gradient(circle at 50% 45%, #0d1024, #04050b 70%); transition: opacity .8s; }
+#loading.done { opacity: 0; pointer-events: none; }
+#loading p { color: var(--text-dim); font-size: 15px; margin: 0; }
+.ld-star { width: 56px; height: 56px; border-radius: 50%; background: radial-gradient(circle, #fff9e6 0%, #ffcb6b 35%, rgba(255, 130, 40, 0) 70%); animation: ldPulse 1.6s ease-in-out infinite; }
+@keyframes ldPulse { 0%, 100% { transform: scale(.85); opacity: .75; } 50% { transform: scale(1.1); opacity: 1; } }
+.fatal { position: fixed; inset: 0; display: grid; place-content: center; text-align: center; padding: 24px; background: #04050b; z-index: 100; font-size: 17px; line-height: 1.6; }
+.fatal h2 { margin-bottom: 8px; }
+
+/* tour card base (tour module adds more) */
+#tour-card { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(var(--tl-h) + var(--gap) * 2); width: min(600px, calc(100vw - 2 * var(--gap))); z-index: 32; padding: 16px 18px; }
+body.info-open #tour-card { left: calc(50% - var(--info-w) / 2); }
+#compare-panel { position: absolute; left: var(--gap); bottom: calc(var(--tl-h) + var(--gap) * 2); width: 360px; z-index: 21; padding: 14px 16px; }
+
+/* mode-dependent visibility */
+body.mode-vergelijken #mass-panel, body.mode-rondleiding #mass-panel, body.mode-eindproducten #mass-panel, body.mode-binnenkant #mass-panel { display: none; }
+body.mode-vergelijken #tl-chips, body.mode-vergelijken .tl-track-wrap { display: none; }
+body.mode-rondleiding #mass-panel { display: none; }
+
+/* ---------- reduced motion ---------- */
+body.reduced-motion *, body.reduced-motion *::before, body.reduced-motion *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; scroll-behavior: auto !important; }
+@media (prefers-reduced-motion: reduce) { .ld-star { animation: none; } }
+
+/* ---------- responsive ---------- */
+@media (max-width: 1180px) {
+  .mode-btn .k { display: none; }
+  .mode-btn { padding: 8px 9px; }
+  .tl-speed { min-width: 240px; }
+  #tl-speed-value { min-width: 130px; }
+}
+@media (max-width: 1180px) and (min-width: 761px) {
+  .scene-hud, .scene-hud.hud-wide { top: auto; bottom: calc(var(--tl-h) + var(--gap) * 2); max-width: 420px; }
+}
+@media (max-width: 1000px) {
+  :root { --info-w: 360px; }
+  #caption { width: 300px; }
+  #mass-panel { width: 300px; }
+  .floating-panel { width: 380px; height: 330px; }
+  .brand-text { display: none; }
+}
+@media (max-width: 760px) {
+  :root { --top-h: 50px; --gap: 8px; --tl-h: 126px; }
+  html, body { font-size: 14px; }
+  .only-mobile { display: inline-grid !important; }
+  .brand-text { display: inline; font-size: 15px; }
+  #topbar { padding: 0 6px; gap: 6px; }
+  .top-actions { margin-left: auto; }
+  #modes { position: absolute; top: calc(100% + 6px); left: 0; right: 0; flex-direction: column; background: var(--glass-strong); border: 1px solid var(--glass-border); border-radius: var(--radius); padding: 8px; display: none; -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px); max-height: 70vh; }
+  #modes.open { display: flex; }
+  .mode-btn { padding: 12px 14px; font-size: 16px; }
+  .mode-btn .k { display: inline; }
+  #caption { left: var(--gap); right: var(--gap); width: auto; padding: 10px 12px 8px; }
+  .cap-title { font-size: 18px; }
+  .cap-sub { font-size: 13px; margin-bottom: 4px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  body.info-open #caption { display: none; }
+  #mass-panel { left: var(--gap); right: var(--gap); width: auto; padding: 8px 12px; }
+  #info-panel { top: auto; left: 0; right: 0; bottom: 0; width: auto; max-height: 72vh; border-radius: 20px 20px 0 0; transform: translateY(105%); z-index: 45; }
+  #info-panel.open { transform: none; }
+  .ip-scroll { padding: 18px 16px 12px; }
+  .ip-title { font-size: 21px; }
+  .ip-nav { padding: 10px 12px calc(12px + env(safe-area-inset-bottom)); }
+  .ip-nav .btn { font-size: 13px; padding: 6px 10px; }
+  .floating-panel, body.info-open .floating-panel { left: var(--gap); right: var(--gap); width: auto; height: 52vh; bottom: calc(var(--tl-h) + var(--gap) * 2); z-index: 36; }
+  .floating-panel.expanded { width: auto; height: 70vh; }
+  .overlay-panel { left: 0; right: 0; transform: none; width: auto; top: calc(var(--top-h) + var(--gap) * 2); bottom: 0; border-radius: 20px 20px 0 0; animation: none; }
+  .op-body { padding: 14px; }
+  #timeline { padding: 6px 8px 8px; }
+  .tl-controls { gap: 4px; }
+  .tl-speed { order: 5; flex: 1 1 100%; margin: 0; min-width: 0; }
+  .tl-speed label { display: none; }
+  #tl-speed-value { min-width: 0; font-size: 12px; }
+  .tl-age { padding: 2px 8px; }
+  #tl-age-value { font-size: 15px; min-width: 0; }
+  #tl-accel { display: none; }
+  .tl-chip button { min-width: 80px; padding: 4px 8px 6px; }
+  #tour-card, body.info-open #tour-card { left: var(--gap); right: var(--gap); transform: none; width: auto; }
+  #compare-panel { left: var(--gap); right: var(--gap); width: auto; max-height: 40vh; overflow-y: auto; }
+  .dropdown { left: var(--gap); right: var(--gap); width: auto; }
+  #tooltip { display: none !important; }
+  .scene-hud, .scene-hud.hud-wide { top: auto; bottom: calc(var(--tl-h) + var(--gap) * 2 + 52px); max-width: calc(100vw - 2 * var(--gap)); min-width: 0; width: calc(100vw - 2 * var(--gap)); font-size: 12.5px; }
+  body.info-open .scene-hud { display: none; }
+}
+@media (max-height: 560px) and (min-width: 761px) {
+  #mass-panel { display: none; }
+  .floating-panel { height: 260px; }
+}
+
+</style>
+</head>
+<body>
+<a class="skip-link" href="#timeline">Naar de tijdlijn</a>
+<div id="app">
+  <div id="viewport" aria-label="3D-weergave van de ster. Sleep om te draaien, scroll of knijp om te zoomen." role="img"></div>
+  <div id="labels" aria-label="Aanklikbare onderdelen in beeld"></div>
+  <div id="fade" aria-hidden="true"></div>
+  <div id="flash" aria-hidden="true"></div>
+
+  <header id="topbar" class="glass">
+    <button id="btn-menu" class="icon-btn only-mobile" aria-label="Menu openen" aria-expanded="false" aria-controls="modes">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+    </button>
+    <div class="brand">
+      <span class="brand-star" aria-hidden="true"></span>
+      <span class="brand-text">Het leven van sterren</span>
+    </div>
+    <nav id="modes" aria-label="Onderdelen">
+      <button class="mode-btn" data-mode="levensloop" aria-pressed="true"><span class="k">1</span>Levensloop</button>
+      <button class="mode-btn" data-mode="eindproducten" aria-pressed="false"><span class="k">2</span>Eindproducten</button>
+      <button class="mode-btn" data-mode="binnenkant" aria-pressed="false"><span class="k">3</span>Binnenkant</button>
+      <button class="mode-btn" data-toggle="hr" aria-pressed="false"><span class="k">4</span>HR-diagram</button>
+      <button class="mode-btn" data-toggle="classificatie" aria-pressed="false"><span class="k">5</span>Classificatie</button>
+      <button class="mode-btn" data-mode="vergelijken" aria-pressed="false"><span class="k">6</span>Vergelijken</button>
+      <button class="mode-btn" data-mode="rondleiding" aria-pressed="false"><span class="k">7</span>Rondleiding</button>
+      <button class="mode-btn" data-toggle="quiz" aria-pressed="false"><span class="k">8</span>Quiz</button>
+    </nav>
+    <div class="top-actions">
+      <button id="btn-objects" class="icon-btn" aria-label="Aanklikbare objecten in beeld" aria-expanded="false" aria-controls="objects-panel" title="In beeld (O)">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8" stroke-dasharray="3 3"/></svg>
+      </button>
+      <button id="btn-settings" class="icon-btn" aria-label="Instellingen" aria-haspopup="dialog" title="Instellingen">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Z"/><path d="M19.4 13.5a7.6 7.6 0 0 0 0-3l2-1.6-2-3.4-2.4 1a7.4 7.4 0 0 0-2.6-1.5L14 2.5h-4l-.4 2.5A7.4 7.4 0 0 0 7 6.5l-2.4-1-2 3.4 2 1.6a7.6 7.6 0 0 0 0 3l-2 1.6 2 3.4 2.4-1a7.4 7.4 0 0 0 2.6 1.5l.4 2.5h4l.4-2.5a7.4 7.4 0 0 0 2.6-1.5l2.4 1 2-3.4Z"/></svg>
+      </button>
+      <button id="btn-help" class="icon-btn" aria-label="Hulp en sneltoetsen" aria-haspopup="dialog" title="Hulp (?)">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.3a2.6 2.6 0 0 1 5 .9c0 1.8-2.5 2.2-2.5 3.8M12 17.2v.1"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <section id="caption" class="glass" aria-live="polite">
+    <div class="cap-kicker" id="cap-kicker"></div>
+    <h1 class="cap-title" id="cap-title">Het leven van sterren</h1>
+    <p class="cap-sub" id="cap-sub"></p>
+    <div class="cap-badges" id="cap-badges"></div>
+    <button class="cap-more link-btn" id="cap-more">Lees meer</button>
+  </section>
+
+  <section id="mass-panel" class="glass" aria-label="Beginmassa van de ster">
+    <div class="mp-head">
+      <label for="mass-slider" class="mp-label">Beginmassa</label>
+      <output id="mass-value" for="mass-slider">1,00 M☉</output>
+      <button class="icon-btn small mp-collapse" id="mass-collapse" aria-label="Paneel inklappen" aria-expanded="true">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 15l6-6 6 6"/></svg>
+      </button>
+    </div>
+    <div class="mp-body" id="mass-body">
+      <input type="range" id="mass-slider" min="0" max="1000" step="1" value="500" aria-describedby="mass-fate">
+      <div class="mp-scale" aria-hidden="true"><span>0,01</span><span>0,1</span><span>1</span><span>10</span><span>150</span></div>
+      <div class="mp-presets" id="mass-presets" role="group" aria-label="Snelkeuze massa"></div>
+      <label class="check"><input type="checkbox" id="lowz"> <span>Laag metaalgehalte (vroeg heelal)</span></label>
+      <div class="mp-fate" id="mass-fate"></div>
+      <p class="mp-note" id="mass-note"></p>
+    </div>
+  </section>
+
+  <aside id="info-panel" class="glass" aria-label="Uitleg" aria-hidden="true" tabindex="-1">
+    <div class="ip-scroll" id="ip-scroll"></div>
+    <button class="icon-btn ip-close" id="ip-close" aria-label="Uitleg sluiten (Esc)">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+    </button>
+  </aside>
+
+  <section id="hr-panel" class="glass floating-panel" aria-label="Hertzsprung-Russelldiagram" hidden>
+    <div class="fp-head">
+      <h2>Hertzsprung-Russelldiagram</h2>
+      <button class="icon-btn small" data-expand="hr-panel" aria-label="Groter/kleiner">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10V4h6M20 14v6h-6M4 4l6 6M20 20l-6-6"/></svg>
+      </button>
+      <button class="icon-btn small" data-close="hr" aria-label="HR-diagram sluiten">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </div>
+    <div class="fp-body" id="hr-body"></div>
+  </section>
+
+  <section id="class-panel" class="glass overlay-panel" aria-label="Classificatie van sterren" hidden>
+    <div class="op-head">
+      <h2>Classificatie van sterren</h2>
+      <button class="icon-btn" data-close="classificatie" aria-label="Classificatie sluiten">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </div>
+    <div class="op-body" id="class-body"></div>
+  </section>
+
+  <section id="gallery-panel" class="glass overlay-panel" aria-label="Stellaire eindproducten" hidden>
+    <div class="op-head">
+      <h2>Stellaire eindproducten</h2>
+      <button class="icon-btn" data-close="gallery" aria-label="Overzicht sluiten">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </div>
+    <div class="op-body" id="gallery-body"></div>
+  </section>
+
+  <section id="compare-panel" class="glass" aria-label="Vergelijkingsmodus" hidden></section>
+  <section id="tour-card" class="glass" aria-label="Rondleiding" aria-live="polite" hidden></section>
+
+  <div id="objects-panel" class="glass dropdown" hidden>
+    <h2 class="dd-title">In beeld</h2>
+    <p class="dd-hint">Alles in deze scène is aanklikbaar. Kies een onderdeel voor uitleg.</p>
+    <ul id="objects-list"></ul>
+  </div>
+
+  <footer id="timeline" class="glass" aria-label="Tijdlijn" tabindex="-1">
+    <div class="tl-controls">
+      <button id="tl-prev" class="icon-btn" aria-label="Vorige fase (←)" title="Vorige fase (←)">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+      </button>
+      <button id="tl-play" class="icon-btn play" aria-label="Afspelen (spatie)" title="Afspelen/pauzeren (spatie)">
+        <svg class="i-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l10.5-6.5Z"/></svg>
+        <svg class="i-pause" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg>
+      </button>
+      <button id="tl-next" class="icon-btn" aria-label="Volgende fase (→)" title="Volgende fase (→)">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+      </button>
+      <div class="tl-speed">
+        <label for="tl-speed-slider">Snelheid</label>
+        <input type="range" id="tl-speed-slider" min="0" max="9" step="0.25" value="6" aria-valuetext="1 seconde is 1 miljoen jaar">
+        <output id="tl-speed-value">1 s = 1 miljoen jaar</output>
+      </div>
+      <div class="tl-age" aria-live="off">
+        <span class="tl-age-label">Leeftijd</span>
+        <output id="tl-age-value">0 jaar</output>
+      </div>
+      <span class="badge badge-time" id="tl-accel" title="De tijd loopt veel sneller dan in het echt">Tijd versneld</span>
+    </div>
+    <div class="tl-track-wrap">
+      <ol id="tl-chips" class="tl-chips" aria-label="Fasen"></ol>
+    </div>
+  </footer>
+
+  <div id="tooltip" role="tooltip" hidden></div>
+
+  <dialog id="settings-dialog" class="glass dialog" aria-labelledby="settings-title">
+    <form method="dialog">
+      <h2 id="settings-title">Instellingen</h2>
+      <fieldset>
+        <legend>Kwaliteit</legend>
+        <div class="seg" role="radiogroup" aria-label="Kwaliteit">
+          <label><input type="radio" name="quality" value="laag"> <span>Laag</span></label>
+          <label><input type="radio" name="quality" value="middel"> <span>Middel</span></label>
+          <label><input type="radio" name="quality" value="hoog"> <span>Hoog</span></label>
+        </div>
+        <p class="hint">Laag: minder deeltjes en effecten, voor oudere laptops en telefoons.</p>
+      </fieldset>
+      <fieldset>
+        <legend>Weergave</legend>
+        <label class="check"><input type="checkbox" id="set-reduced"> <span>Minder beweging (geen flitsen, geen automatisch draaien)</span></label>
+        <label class="check"><input type="checkbox" id="set-labels"> <span>Labels in de 3D-scène tonen</span></label>
+        <label class="check"><input type="checkbox" id="set-autorotate"> <span>Camera langzaam laten draaien</span></label>
+        <label class="check"><input type="checkbox" id="set-fps"> <span>Beeldsnelheid (fps) tonen</span></label>
+      </fieldset>
+      <div class="dialog-actions"><button class="btn primary" value="ok">Sluiten</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="help-dialog" class="glass dialog" aria-labelledby="help-title">
+    <form method="dialog">
+      <h2 id="help-title">Zo werkt het</h2>
+      <div id="help-body"></div>
+      <div class="dialog-actions"><button class="btn primary" value="ok">Begrepen</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="quiz-dialog" class="glass dialog wide" aria-labelledby="quiz-title">
+    <div class="quiz-head">
+      <h2 id="quiz-title">Quiz: het leven van sterren</h2>
+      <button class="icon-btn" data-close="quiz" aria-label="Quiz sluiten">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </div>
+    <div id="quiz-body"></div>
+  </dialog>
+
+  <div id="fps" hidden>– fps</div>
+  <div id="toast" role="status" aria-live="polite" hidden></div>
+
+  <div id="loading" aria-live="polite">
+    <div class="ld-star" aria-hidden="true"></div>
+    <p>Sterren worden geboren…</p>
+  </div>
+  <noscript><div class="fatal">Deze simulatie heeft JavaScript nodig.</div></noscript>
+</div>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"
+  }
+}
+</script>
+<script type="module">
+// =====================================================================
+// 05-imports.js
+// =====================================================================
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutlinePass } from 'three/addons/postprocessing/OutlinePass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { Lensflare, LensflareElement } from 'three/addons/objects/Lensflare.js';
+import * as BufferGeometryUtils from 'three/addons/utils/BufferGeometryUtils.js';
+
+// =====================================================================
+// 10-utils.js
+// =====================================================================
+/* Utilities shared by every module: math, easing, seeded randomness, Dutch number
+   formatting, star colours, spectral types, DOM helpers, event bus, settings, quality
+   presets and the module/scene registry. */
+
+const PHYS = {
+  G: 6.674e-11,          // m^3 kg^-1 s^-2
+  c: 2.998e8,            // m/s
+  sigma: 5.670e-8,       // Stefan-Boltzmann, W m^-2 K^-4
+  h: 6.626e-34,
+  kB: 1.381e-23,
+  Msun: 1.989e30,        // kg
+  Rsun: 6.957e8,         // m
+  Lsun: 3.828e26,        // W
+  Tsun: 5772,            // K
+  Mearth: 5.972e24,
+  Rearth: 6.371e6,
+  Mjup: 1.898e27,
+  Rjup: 6.9911e7,
+  AU: 1.496e11,
+  ly: 9.461e15,
+  pc: 3.086e16,
+  yr: 3.156e7,           // s
+};
+
+const U = {
+  clamp: (x, a = 0, b = 1) => Math.min(b, Math.max(a, x)),
+  lerp: (a, b, t) => a + (b - a) * t,
+  invLerp: (a, b, x) => (x - a) / (b - a),
+  mapRange: (x, a, b, c, d, clamp = true) => { let t = (x - a) / (b - a); if (clamp) t = Math.min(1, Math.max(0, t)); return c + (d - c) * t; },
+  smoothstep: (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); },
+  logLerp: (a, b, t) => Math.exp(Math.log(a) + (Math.log(b) - Math.log(a)) * t),
+  fract: (x) => x - Math.floor(x),
+  deg: (r) => r * 180 / Math.PI,
+  rad: (d) => d * Math.PI / 180,
+
+  ease: {
+    linear: (t) => t,
+    inQuad: (t) => t * t,
+    outQuad: (t) => 1 - (1 - t) * (1 - t),
+    inOutQuad: (t) => (t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2),
+    inCubic: (t) => t * t * t,
+    outCubic: (t) => 1 - Math.pow(1 - t, 3),
+    inOutCubic: (t) => (t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2),
+    inOutSine: (t) => -(Math.cos(Math.PI * t) - 1) / 2,
+    outExpo: (t) => (t === 1 ? 1 : 1 - Math.pow(2, -10 * t)),
+    inExpo: (t) => (t === 0 ? 0 : Math.pow(2, 10 * t - 10)),
+    outBack: (t) => { const c1 = 1.70158, c3 = c1 + 1; return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2); },
+  },
+
+  /** Seeded PRNG (mulberry32). Returns () => [0,1). */
+  rng(seed = 1) {
+    let a = seed >>> 0;
+    return function () {
+      a |= 0; a = (a + 0x6D2B79F5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  },
+  /** Standard normal sample using a PRNG from U.rng. */
+  gauss(r) { let u = 0, v = 0; while (u === 0) u = r(); while (v === 0) v = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); },
+  /** Uniform random point in the unit ball, written into out (THREE.Vector3). */
+  randInSphere(r, out) { let x, y, z; do { x = r() * 2 - 1; y = r() * 2 - 1; z = r() * 2 - 1; } while (x * x + y * y + z * z > 1); return out.set(x, y, z); },
+  /** Uniform random direction on the unit sphere. */
+  randDir(r, out) { const z = r() * 2 - 1, a = r() * Math.PI * 2, s = Math.sqrt(1 - z * z); return out.set(s * Math.cos(a), z, s * Math.sin(a)); },
+
+  // ---------------------------------------------------------------- formatting (nl-NL)
+  _nf: {},
+  nf(maxFrac, minFrac = 0) {
+    const k = maxFrac + ':' + minFrac;
+    return this._nf[k] || (this._nf[k] = new Intl.NumberFormat('nl-NL', { maximumFractionDigits: maxFrac, minimumFractionDigits: minFrac }));
+  },
+  /** Plain Dutch number: 1234.5 -> "1.234,5" */
+  fmt(n, maxFrac = 2, minFrac = 0) { return this.nf(maxFrac, minFrac).format(n); },
+  /** Number with ~sig significant digits, Dutch separators. */
+  fmtSig(n, sig = 3) {
+    if (n === 0 || !isFinite(n)) return this.fmt(n);
+    const mag = Math.floor(Math.log10(Math.abs(n)));
+    const frac = Math.max(0, Math.min(8, sig - 1 - mag));
+    const rounded = Number(n.toPrecision(sig));
+    return this.fmt(rounded, frac);
+  },
+  _sup: { '-': '⁻', 0: '⁰', 1: '¹', 2: '²', 3: '³', 4: '⁴', 5: '⁵', 6: '⁶', 7: '⁷', 8: '⁸', 9: '⁹' },
+  superscript(s) { return String(s).split('').map((c) => this._sup[c] ?? c).join(''); },
+  /** Scientific notation: 1.989e30 -> "1,99 × 10³⁰" */
+  fmtSci(n, sig = 3) {
+    if (n === 0) return '0';
+    const e = Math.floor(Math.log10(Math.abs(n)));
+    const m = n / Math.pow(10, e);
+    const ms = this.fmt(Number(m.toPrecision(sig)), sig - 1);
+    return (ms === '1' ? '' : ms + ' × ') + '10' + this.superscript(e);
+  },
+  _bigWords: [[1e24, 'quadriljoen'], [1e21, 'triljard'], [1e18, 'triljoen'], [1e15, 'biljard'], [1e12, 'biljoen'], [1e9, 'miljard'], [1e6, 'miljoen']],
+  /** 4.6e9 -> "4,6 miljard"; 12000 -> "12.000"; 3.2e40 -> "3,2 × 10⁴⁰" */
+  fmtBig(n, sig = 3) {
+    const a = Math.abs(n);
+    if (a >= 1e27) return this.fmtSci(n, sig);
+    for (const [v, w] of this._bigWords) if (a >= v) return this.fmtSig(n / v, sig) + ' ' + w;
+    if (a >= 1000) return this.fmt(Math.round(Number(n.toPrecision(Math.max(sig, Math.floor(Math.log10(a)) + 1)))), 0);
+    if (a >= 1) return this.fmtSig(n, sig);
+    if (a === 0) return '0';
+    if (a >= 1e-4) return this.fmtSig(n, sig);
+    return this.fmtSci(n, sig);
+  },
+  /** Durations given in years. Tiny values are shown in seconds/milliseconds. */
+  fmtYears(y, sig = 3) {
+    const a = Math.abs(y);
+    if (a === 0) return '0 jaar';
+    const s = a * PHYS.yr;
+    if (s < 1) { const ms = s * 1000; return ms < 1 ? this.fmtSig(ms * 1000, 2) + ' microseconden' : this.fmtSig(ms, 2) + (Math.round(ms) === 1 ? ' milliseconde' : ' milliseconden'); }
+    if (s < 60) return this.fmtSig(s, 2) + (Math.round(s) === 1 ? ' seconde' : ' seconden');
+    if (s < 3600) { const m = s / 60; return this.fmtSig(m, 2) + (Math.round(m) === 1 ? ' minuut' : ' minuten'); }
+    if (s < 86400) { const h = s / 3600; return this.fmtSig(h, 2) + ' uur'; }
+    if (a < 1) { const d = s / 86400; return this.fmtSig(d, 2) + (Math.round(d) === 1 ? ' dag' : ' dagen'); }
+    return this.fmtBig(y, sig) + ' jaar';
+  },
+  fmtTemp(K) { return (K >= 1e6 ? this.fmtBig(K, 3) : this.fmt(Math.round(K / 10) * 10, 0)) + ' K'; },
+  fmtMass(m) { return this.fmtSig(m, m < 1 ? 2 : 3) + ' M☉'; },
+  fmtLum(l) { return (l >= 1e4 ? this.fmtBig(l, 2) : this.fmtSig(l, 2)) + ' L☉'; },
+  fmtRadius(r) {
+    const km = r * PHYS.Rsun / 1000;
+    if (km < 1e5) return this.fmtBig(Math.round(km), 3) + ' km';
+    return (r >= 1e4 ? this.fmtBig(r, 3) : this.fmtSig(r, r < 1 ? 2 : 3)) + ' R☉';
+  },
+
+  // ---------------------------------------------------------------- colour
+  _bb: [ // blackbody sRGB (D65), after M. Charity's table: [T, r, g, b]
+    [1000, 255, 56, 0], [1500, 255, 109, 0], [2000, 255, 137, 18], [2500, 255, 161, 72], [3000, 255, 180, 107],
+    [3500, 255, 196, 137], [4000, 255, 209, 163], [4500, 255, 219, 186], [5000, 255, 228, 206], [5500, 255, 236, 224],
+    [6000, 255, 243, 239], [6500, 255, 249, 253], [7000, 245, 243, 255], [7500, 235, 238, 255], [8000, 227, 233, 255],
+    [9000, 214, 225, 255], [10000, 204, 219, 255], [12000, 191, 211, 255], [15000, 179, 204, 255], [20000, 168, 197, 255],
+    [25000, 162, 192, 255], [30000, 159, 189, 255], [40000, 155, 188, 255],
+  ],
+  _disp: [ // display palette, slightly saturated so the classes read clearly: O blue ... M red
+    [400, .30, .10, .16], [800, .45, .13, .16], [1300, .70, .17, .10], [2000, .92, .25, .10], [2800, 1.0, .38, .16],
+    [3500, 1.0, .52, .26], [4400, 1.0, .72, .40], [5300, 1.0, .86, .56], [5800, 1.0, .93, .68], [6600, 1.0, .98, .86],
+    [7500, .98, .98, .96], [9000, .88, .92, 1.0], [12000, .78, .86, 1.0], [20000, .67, .78, 1.0], [30000, .60, .72, 1.0],
+    [50000, .54, .66, 1.0],
+  ],
+  _interp(table, T, scale) {
+    if (T <= table[0][0]) return table[0].slice(1).map((v) => v / scale);
+    for (let i = 1; i < table.length; i++) {
+      if (T <= table[i][0]) {
+        const a = table[i - 1], b = table[i], t = (Math.log(T) - Math.log(a[0])) / (Math.log(b[0]) - Math.log(a[0]));
+        return [1, 2, 3].map((k) => (a[k] + (b[k] - a[k]) * t) / scale);
+      }
+    }
+    return table[table.length - 1].slice(1).map((v) => v / scale);
+  },
+  /** Physically faithful blackbody colour (sRGB, normalised). Returns THREE.Color (linear working space). */
+  blackbody(T, out = new THREE.Color()) { const [r, g, b] = this._interp(this._bb, T, 255); return out.setRGB(r, g, b, THREE.SRGBColorSpace); },
+  /** Display colour per temperature: O blue, B blue-white, A white, F yellow-white, G yellow, K orange, M red. */
+  starColor(T, out = new THREE.Color()) { const [r, g, b] = this._interp(this._disp, T, 1); return out.setRGB(r, g, b, THREE.SRGBColorSpace); },
+  /** CSS colour string for a temperature (display palette). */
+  starCss(T, alpha = 1) { const [r, g, b] = this._interp(this._disp, T, 1); return `rgba(${Math.round(r * 255)},${Math.round(g * 255)},${Math.round(b * 255)},${alpha})`; },
+
+  // ---------------------------------------------------------------- spectral type
+  _spt: [ // [Teff, class, subclass] main-sequence scale (after Pecaut & Mamajek 2013)
+    [54000, 'O', 2], [44900, 'O', 3], [41400, 'O', 5], [38000, 'O', 6], [35800, 'O', 7], [33000, 'O', 8], [31900, 'O', 9],
+    [31400, 'B', 0], [26000, 'B', 1], [20600, 'B', 2], [17000, 'B', 3], [16700, 'B', 4], [15700, 'B', 5], [14500, 'B', 6], [14000, 'B', 7], [12500, 'B', 8], [10700, 'B', 9],
+    [9700, 'A', 0], [9300, 'A', 1], [8800, 'A', 2], [8600, 'A', 3], [8250, 'A', 4], [8100, 'A', 5], [7910, 'A', 6], [7760, 'A', 7], [7590, 'A', 8], [7400, 'A', 9],
+    [7220, 'F', 0], [7020, 'F', 1], [6820, 'F', 2], [6750, 'F', 3], [6670, 'F', 4], [6550, 'F', 5], [6350, 'F', 6], [6280, 'F', 7], [6180, 'F', 8], [6050, 'F', 9],
+    [5930, 'G', 0], [5860, 'G', 1], [5770, 'G', 2], [5720, 'G', 3], [5680, 'G', 4], [5660, 'G', 5], [5600, 'G', 6], [5550, 'G', 7], [5480, 'G', 8], [5380, 'G', 9],
+    [5270, 'K', 0], [5170, 'K', 1], [5100, 'K', 2], [4830, 'K', 3], [4600, 'K', 4], [4440, 'K', 5], [4300, 'K', 6], [4100, 'K', 7], [3990, 'K', 8], [3930, 'K', 9],
+    [3850, 'M', 0], [3660, 'M', 1], [3560, 'M', 2], [3430, 'M', 3], [3210, 'M', 4], [3060, 'M', 5], [2810, 'M', 6], [2680, 'M', 7], [2570, 'M', 8], [2380, 'M', 9],
+    [2270, 'L', 0], [2160, 'L', 1], [2060, 'L', 2], [1920, 'L', 3], [1870, 'L', 4], [1710, 'L', 5], [1550, 'L', 6], [1450, 'L', 7], [1350, 'L', 8], [1300, 'L', 9],
+    [1250, 'T', 0], [1200, 'T', 2], [1100, 'T', 4], [1000, 'T', 5], [900, 'T', 6], [800, 'T', 7], [700, 'T', 8], [550, 'T', 9],
+    [450, 'Y', 0], [350, 'Y', 1], [250, 'Y', 2],
+  ],
+  /** Spectral class for an effective temperature: { cls:'G', sub:2, label:'G2' } */
+  spectralType(T) {
+    const t = this._spt;
+    let best = t[0], d = Infinity;
+    for (const row of t) { const dd = Math.abs(Math.log(row[0]) - Math.log(T)); if (dd < d) { d = dd; best = row; } }
+    return { cls: best[1], sub: best[2], label: best[1] + best[2] };
+  },
+
+  // ---------------------------------------------------------------- DOM
+  $: (sel, root = document) => root.querySelector(sel),
+  $$: (sel, root = document) => Array.from(root.querySelectorAll(sel)),
+  /** el('button', {class:'btn', onclick: fn, 'aria-label': 'x'}, 'text' | Node | [..]) */
+  el(tag, attrs = {}, children = []) {
+    const e = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs || {})) {
+      if (v === undefined || v === null || v === false) continue;
+      if (k === 'class') e.className = v;
+      else if (k === 'html') e.innerHTML = v;
+      else if (k === 'text') e.textContent = v;
+      else if (k === 'style' && typeof v === 'object') Object.assign(e.style, v);
+      else if (k.startsWith('on') && typeof v === 'function') e.addEventListener(k.slice(2), v);
+      else if (k === 'dataset') Object.assign(e.dataset, v);
+      else e.setAttribute(k, v === true ? '' : v);
+    }
+    for (const c of [].concat(children)) if (c !== null && c !== undefined && c !== false) e.append(c.nodeType ? c : document.createTextNode(String(c)));
+    return e;
+  },
+  escapeHtml: (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])),
+  isTouch: () => matchMedia('(pointer: coarse)').matches,
+  isMobile: () => matchMedia('(max-width: 760px)').matches,
+  /** localStorage that never throws (private mode, blocked storage). */
+  store: {
+    get(k, d = null) { try { const v = localStorage.getItem('sterren:' + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
+    set(k, v) { try { localStorage.setItem('sterren:' + k, JSON.stringify(v)); } catch (e) { /* storage unavailable */ } },
+  },
+};
+
+/** Tiny pub/sub used for loose coupling between modules. */
+class EventBus {
+  constructor() { this.map = new Map(); }
+  on(evt, fn) { if (!this.map.has(evt)) this.map.set(evt, new Set()); this.map.get(evt).add(fn); return () => this.off(evt, fn); }
+  off(evt, fn) { this.map.get(evt)?.delete(fn); }
+  emit(evt, data) { for (const fn of [...(this.map.get(evt) || [])]) { try { fn(data); } catch (e) { console.error(`[bus:${evt}]`, e); } } }
+}
+const bus = new EventBus();
+
+const QUALITY = {
+  laag: { pixelRatio: 1, antialias: false, particles: 0.35, stars: 3500, bloomStrength: 0.9, bloomRes: 0.5, outline: false, lensflare: false, sphereSeg: 48, bhSteps: 90, bhScale: 0.5, lod: 0 },
+  middel: { pixelRatio: 1.5, antialias: true, particles: 0.7, stars: 9000, bloomStrength: 1.0, bloomRes: 0.75, outline: true, lensflare: true, sphereSeg: 96, bhSteps: 160, bhScale: 0.75, lod: 1 },
+  hoog: { pixelRatio: 2, antialias: true, particles: 1.0, stars: 16000, bloomStrength: 1.0, bloomRes: 1.0, outline: true, lensflare: true, sphereSeg: 128, bhSteps: 260, bhScale: 1.0, lod: 2 },
+};
+
+/** User settings, persisted. Change with Settings.set(key, value) -> emits bus 'settings'. */
+const Settings = {
+  quality: 'middel',
+  reducedMotion: false,
+  labels: true,
+  autoRotate: false,
+  showFps: false,
+  load() {
+    const mobile = matchMedia('(max-width: 760px), (pointer: coarse)').matches;
+    this.quality = U.store.get('quality', mobile ? 'laag' : 'middel');
+    if (!QUALITY[this.quality]) this.quality = 'middel';
+    this.reducedMotion = U.store.get('reducedMotion', matchMedia('(prefers-reduced-motion: reduce)').matches);
+    this.labels = U.store.get('labels', true);
+    this.autoRotate = U.store.get('autoRotate', false);
+    this.showFps = U.store.get('showFps', false);
+    const q = new URLSearchParams(location.search);
+    if (q.get('quality') && QUALITY[q.get('quality')]) this.quality = q.get('quality');
+    if (q.has('reducedMotion')) this.reducedMotion = q.get('reducedMotion') !== '0';
+  },
+  set(key, value) {
+    if (this[key] === value) return;
+    this[key] = value;
+    U.store.set(key, value);
+    bus.emit('settings', { key, value });
+  },
+};
+/** Current quality preset object. */
+const Q = () => QUALITY[Settings.quality] || QUALITY.middel;
+
+/** Registry: scenes and optional feature modules register themselves here, so a
+    missing or failing module never breaks the rest of the app. */
+const Registry = {
+  scenes: {},   // id -> { cls, meta }
+  modules: {},  // name -> class / object
+  /** meta: { title, kicker, subtitle, group:'vorming'|'evolutie'|'eindproduct'|'doorsnede'|'overig',
+              infoId, badges:['schaal','tijd','traag'], status:'waargenomen'|'theorie'|'deels', gallery:{order, blurb, art} } */
+  registerScene(id, cls, meta = {}) { this.scenes[id] = { cls, meta: Object.assign({ title: id, group: 'overig', infoId: id, badges: [] }, meta) }; },
+  register(name, mod) { this.modules[name] = mod; },
+};
+
+// =====================================================================
+// 15-content-base.js
+// =====================================================================
+/* Content: ALL Dutch text lives in this one data object. Other files in the
+   16-content-*.js range only add entries to it (Object.assign), so the whole
+   text base stays together in one section of the final file. */
+
+const Content = {
+  ui: {
+    appTitle: 'Het leven van sterren',
+    status: {
+      waargenomen: { label: 'Waargenomen', cls: 'badge-obs', info: 'ui.waargenomen' },
+      deels: { label: 'Deels waargenomen', cls: 'badge-partial', info: 'ui.deels' },
+      theorie: { label: 'Theorie', cls: 'badge-theory', info: 'ui.theorie' },
+    },
+    badges: {
+      schaal: { label: 'Niet op schaal', cls: 'badge-scale', info: 'ui.schaal' },
+      tijd: { label: 'Tijd versneld', cls: 'badge-time', info: 'ui.tijd' },
+      traag: { label: 'Slow motion', cls: 'badge-slow', info: 'ui.traag' },
+    },
+    modes: {
+      levensloop: 'Levensloop', eindproducten: 'Eindproducten', binnenkant: 'Binnenkant', vergelijken: 'Vergelijken', rondleiding: 'Rondleiding',
+    },
+    infoPanel: { stats: 'Kerngetallen', fact: 'Wist je dat?', deeper: 'Dieper duiken', prev: 'Vorige fase', next: 'Volgende fase', view3d: 'Bekijk in 3D', related: 'Zie ook' },
+    tooltipHint: 'Klik voor uitleg',
+    tooltipHintTouch: 'Tik voor uitleg',
+    play: 'Afspelen (spatie)', pause: 'Pauzeren (spatie)',
+    speedFmt: (yps) => '1 s = ' + U.fmtYears(yps, 2),
+    ageFmt: (y) => U.fmtYears(y, 3),
+    stageN: (i, n) => `Fase ${i} van ${n}`,
+    massPresets: [
+      { m: 0.05, label: 'Bruine dwerg' }, { m: 0.2, label: 'Rode dwerg' }, { m: 1, label: 'Zon' },
+      { m: 3, label: '3 M☉' }, { m: 15, label: '15 M☉' }, { m: 40, label: '40 M☉' },
+    ],
+    massNote: 'De grenzen tussen de paden zijn bij benadering: ze hangen af van het metaalgehalte, de rotatie en of de ster een begeleider heeft in een dubbelstersysteem.',
+    webglError: '<h2>3D-weergave niet beschikbaar</h2><p>Je browser of apparaat ondersteunt geen WebGL, of het staat uit.<br>Probeer een recente versie van Chrome, Firefox, Edge of Safari, of zet hardwareversnelling aan.</p>',
+    loadError: '<h2>Er ging iets mis bij het laden</h2><p>Controleer je internetverbinding: de 3D-bibliotheek (Three.js) wordt van internet geladen.</p>',
+    objectsEmpty: 'In deze scène zijn geen aparte onderdelen.',
+    gallerySections: { eindproduct: 'Eindproducten van sterren', explosie: 'Explosies en botsingen' },
+    galleryIntro: 'Wat blijft er over als een ster sterft? Dat hangt vooral af van de beginmassa. Kies een eindproduct om het in 3D te bekijken.',
+    fpsSuffix: ' fps',
+    qualityChanged: (q) => `Kwaliteit: ${q}`,
+    reducedOn: 'Minder beweging staat aan: geen flitsen en geen automatische camerabewegingen.',
+  },
+
+  help: `
+    <p>Deze simulatie laat zien hoe sterren ontstaan, leven en sterven. Alles wat je ziet is aanklikbaar: sterren, lagen, schijven, jets, nevels, punten in het HR-diagram en de fasen in de tijdlijn.</p>
+    <div class="help-grid">
+      <kbd>Slepen</kbd><span>Camera draaien (op een touchscreen: één vinger)</span>
+      <kbd>Scrollen</kbd><span>In- en uitzoomen (op een touchscreen: knijpen)</span>
+      <kbd>Rechts slepen</kbd><span>Camera verschuiven (touchscreen: twee vingers)</span>
+      <kbd>Spatie</kbd><span>Tijd afspelen of pauzeren</span>
+      <kbd>← →</kbd><span>Vorige of volgende fase</span>
+      <kbd>1 – 8</kbd><span>Onderdelen: levensloop, eindproducten, binnenkant, HR-diagram, classificatie, vergelijken, rondleiding, quiz</span>
+      <kbd>O</kbd><span>Lijst met aanklikbare objecten in beeld</span>
+      <kbd>H</kbd><span>HR-diagram tonen of verbergen</span>
+      <kbd>I</kbd><span>Uitleg van de huidige fase openen</span>
+      <kbd>R</kbd><span>Camera terugzetten</span>
+      <kbd>Esc</kbd><span>Paneel of venster sluiten</span>
+      <kbd>Tab</kbd><span>Door knoppen en labels lopen; <kbd>Enter</kbd> kiest</span>
+    </div>
+    <p class="hint">Labels met <span class="badge badge-scale">Niet op schaal</span> en <span class="badge badge-time">Tijd versneld</span> geven aan waar afmetingen of tijd zijn aangepast om alles zichtbaar te maken. <span class="badge badge-obs">Waargenomen</span> en <span class="badge badge-theory">Theorie</span> laten zien wat astronomen echt gezien hebben en wat (nog) alleen voorspeld is.</p>`,
+
+  /** Info entries: id -> { title, tooltip, kicker, status, body[], stats[[k,v]], fact, deeper[], scene, params, focus, related[], actions[] } */
+  info: {
+    'ui.schaal': {
+      title: 'Niet op schaal', kicker: 'Over deze simulatie', tooltip: 'Afmetingen zijn aangepast',
+      body: [
+        'Sterren verschillen enorm in grootte. Een neutronenster is ongeveer 20 kilometer groot, een rode superreus kan meer dan een miljard kilometer groot zijn. Als we alles op ware grootte zouden tekenen, zag je het ene object helemaal niet of paste het andere niet in beeld.',
+        'Daarom zijn afmetingen en afstanden in veel scènes aangepast. Waar dat zo is, staat het label <b>Niet op schaal</b>. De getallen in de uitleg zijn wel de echte waarden.',
+      ],
+      fact: 'Als de Zon zo groot was als een voetbal, dan was de Aarde een peperkorrel op 25 meter afstand, en de dichtstbijzijnde ster (Proxima Centauri) een pingpongbal op zo\'n 6500 kilometer afstand.',
+      related: ['ui.tijd'],
+    },
+    'ui.tijd': {
+      title: 'Tijd versneld', kicker: 'Over deze simulatie', tooltip: 'De tijd loopt veel sneller',
+      body: [
+        'Het leven van een ster duurt miljoenen tot biljoenen jaren. Om dat in een paar minuten te laten zien, laten we de tijd enorm veel sneller lopen. Met de snelheidsregelaar kies je hoeveel jaar er in één seconde voorbijgaat: van 1 jaar tot 1 miljard jaar per seconde.',
+        'Korte gebeurtenissen, zoals een supernova of een heliumflits, zouden dan in een flits voorbij zijn. Daarom krijgt elke fase in de tijdlijn minimaal een paar seconden. De leeftijdsteller laat altijd de echte leeftijd van de ster zien.',
+      ],
+      fact: 'De instorting van de kern van een zware ster duurt minder dan een seconde, maar het licht van de explosie blijft maandenlang zichtbaar.',
+      related: ['ui.schaal', 'ui.traag'],
+    },
+    'ui.traag': {
+      title: 'Slow motion', kicker: 'Over deze simulatie', tooltip: 'Deze gebeurtenis is vertraagd',
+      body: [
+        'Sommige gebeurtenissen gaan zo snel dat je ze in het echt nooit zou kunnen volgen, zoals de instorting van een sterkern (milliseconden) of het samensmelten van twee neutronensterren. Die tonen we vertraagd, als in een slow-motionfilm.',
+      ],
+      related: ['ui.tijd'],
+    },
+    'ui.waargenomen': {
+      title: 'Waargenomen', kicker: 'Wetenschap', tooltip: 'Dit hebben astronomen echt gezien',
+      body: [
+        'Dit label betekent dat astronomen dit verschijnsel echt hebben waargenomen met telescopen of andere instrumenten, bijvoorbeeld in zichtbaar licht, infrarood, röntgenstraling, radiostraling, neutrino\'s of zwaartekrachtgolven.',
+        'De details in de animatie zijn natuurlijk wel een artistieke weergave: we kunnen de meeste sterren alleen als lichtpuntje zien.',
+      ],
+      related: ['ui.theorie', 'ui.deels'],
+    },
+    'ui.deels': {
+      title: 'Deels waargenomen', kicker: 'Wetenschap', tooltip: 'Een deel is gezien, een deel is theorie',
+      body: [
+        'Van dit verschijnsel is een deel echt waargenomen, maar andere delen volgen alleen uit berekeningen en modellen. Een voorbeeld: we zien witte dwergen en planetaire nevels, maar het precieze verloop van de heliumflits in de kern van een rode reus kunnen we niet direct zien.',
+      ],
+      related: ['ui.waargenomen', 'ui.theorie'],
+    },
+    'ui.theorie': {
+      title: 'Theorie', kicker: 'Wetenschap', tooltip: 'Voorspeld, maar (nog) niet gezien',
+      body: [
+        'Dit label betekent dat het verschijnsel voorspeld wordt door natuurkundige theorieën, maar nog niet is waargenomen. Soms kan dat ook helemaal nog niet: een zwarte dwerg (een volledig afgekoelde witte dwerg) bestaat nog niet, omdat het heelal met 13,8 miljard jaar veel te jong is.',
+        'Ook Hawkingstraling van zwarte gaten en paarinstabiliteitssupernova\'s zijn (nog) niet met zekerheid waargenomen.',
+      ],
+      related: ['ui.waargenomen', 'ui.deels'],
+    },
+  },
+
+  // Filled by other content files:
+  stars: [],              // known stars for the HR diagram (16-content-hr.js)
+  spectralClasses: [],    // Morgan-Keenan classes (16-content-classification.js)
+  luminosityClasses: [],
+  sizeComparison: [],
+  tour: [],               // guided tour steps (16-content-tour.js)
+  quiz: [],               // quiz questions (16-content-quiz.js)
+  paths: {},              // evolution-path texts per mass category (16-content-evolution.js)
+};
+
+/** Look up an info entry; returns a friendly fallback instead of throwing. */
+Content.get = function (id) {
+  return Content.info[id] || null;
+};
+
+// =====================================================================
+// 20-shaders.js
+// =====================================================================
+/* Shaders: shared GLSL chunks and global uniforms. Star-surface shaders are added to
+   this object by 21-shaders-star.js (Object.assign(Shaders, {...})). */
+
+const Shaders = {
+  /** Global animation clock shared by all materials (seconds). Incremented by SceneManager. */
+  uTime: { value: 0 },
+  /** Drawing-buffer height in device pixels (for world-size point sprites). */
+  uViewH: { value: 800 },
+  /** Device pixel ratio actually used by the renderer. */
+  uPixelRatio: { value: 1 },
+
+  /** 3D simplex noise (Ashima Arts / Stefan Gustavson, MIT) + fbm helpers. */
+  noise: /* glsl */`
+    vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+    vec4 mod289(vec4 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+    vec4 permute(vec4 x) { return mod289(((x * 34.0) + 1.0) * x); }
+    vec4 taylorInvSqrt(vec4 r) { return 1.79284291400159 - 0.85373472095314 * r; }
+    float snoise(vec3 v) {
+      const vec2 C = vec2(1.0 / 6.0, 1.0 / 3.0);
+      const vec4 D = vec4(0.0, 0.5, 1.0, 2.0);
+      vec3 i = floor(v + dot(v, C.yyy));
+      vec3 x0 = v - i + dot(i, C.xxx);
+      vec3 g = step(x0.yzx, x0.xyz);
+      vec3 l = 1.0 - g;
+      vec3 i1 = min(g.xyz, l.zxy);
+      vec3 i2 = max(g.xyz, l.zxy);
+      vec3 x1 = x0 - i1 + C.xxx;
+      vec3 x2 = x0 - i2 + C.yyy;
+      vec3 x3 = x0 - D.yyy;
+      i = mod289(i);
+      vec4 p = permute(permute(permute(i.z + vec4(0.0, i1.z, i2.z, 1.0)) + i.y + vec4(0.0, i1.y, i2.y, 1.0)) + i.x + vec4(0.0, i1.x, i2.x, 1.0));
+      float n_ = 0.142857142857;
+      vec3 ns = n_ * D.wyz - D.xzx;
+      vec4 j = p - 49.0 * floor(p * ns.z * ns.z);
+      vec4 x_ = floor(j * ns.z);
+      vec4 y_ = floor(j - 7.0 * x_);
+      vec4 x = x_ * ns.x + ns.yyyy;
+      vec4 y = y_ * ns.x + ns.yyyy;
+      vec4 h = 1.0 - abs(x) - abs(y);
+      vec4 b0 = vec4(x.xy, y.xy);
+      vec4 b1 = vec4(x.zw, y.zw);
+      vec4 s0 = floor(b0) * 2.0 + 1.0;
+      vec4 s1 = floor(b1) * 2.0 + 1.0;
+      vec4 sh = -step(h, vec4(0.0));
+      vec4 a0 = b0.xzyw + s0.xzyw * sh.xxyy;
+      vec4 a1 = b1.xzyw + s1.xzyw * sh.zzww;
+      vec3 p0 = vec3(a0.xy, h.x);
+      vec3 p1 = vec3(a0.zw, h.y);
+      vec3 p2 = vec3(a1.xy, h.z);
+      vec3 p3 = vec3(a1.zw, h.w);
+      vec4 norm = taylorInvSqrt(vec4(dot(p0, p0), dot(p1, p1), dot(p2, p2), dot(p3, p3)));
+      p0 *= norm.x; p1 *= norm.y; p2 *= norm.z; p3 *= norm.w;
+      vec4 m = max(0.6 - vec4(dot(x0, x0), dot(x1, x1), dot(x2, x2), dot(x3, x3)), 0.0);
+      m = m * m;
+      return 42.0 * dot(m * m, vec4(dot(p0, x0), dot(p1, x1), dot(p2, x2), dot(p3, x3)));
+    }
+    float fbm3(vec3 p) { float f = 0.0, a = 0.5; for (int i = 0; i < 4; i++) { f += a * snoise(p); p = p * 2.03 + vec3(17.1, 3.3, 9.7); a *= 0.5; } return f; }
+    float fbm5(vec3 p) { float f = 0.0, a = 0.5; for (int i = 0; i < 5; i++) { f += a * snoise(p); p = p * 2.03 + vec3(17.1, 3.3, 9.7); a *= 0.5; } return f; }
+    float ridged(vec3 p) { float f = 0.0, a = 0.5; for (int i = 0; i < 4; i++) { f += a * (1.0 - abs(snoise(p))); p = p * 2.1 + 5.3; a *= 0.5; } return f; }
+  `,
+
+  /** Cheap hashes. */
+  hash: /* glsl */`
+    float hash11(float p) { p = fract(p * 0.1031); p *= p + 33.33; p *= p + p; return fract(p); }
+    float hash13(vec3 p3) { p3 = fract(p3 * 0.1031); p3 += dot(p3, p3.zyx + 31.32); return fract((p3.x + p3.y) * p3.z); }
+    vec3 hash33(vec3 p3) { p3 = fract(p3 * vec3(.1031, .1030, .0973)); p3 += dot(p3, p3.yxz + 33.33); return fract((p3.xxy + p3.yxx) * p3.zyx); }
+  `,
+
+  /** Fresnel rim glow (use on a slightly larger sphere, BackSide or FrontSide, additive). */
+  rimGlow: {
+    vertex: /* glsl */`
+      varying vec3 vN; varying vec3 vV;
+      void main() {
+        vec4 mv = modelViewMatrix * vec4(position, 1.0);
+        vN = normalize(normalMatrix * normal); vV = normalize(-mv.xyz);
+        gl_Position = projectionMatrix * mv;
+      }`,
+    fragment: /* glsl */`
+      uniform vec3 uColor; uniform float uIntensity; uniform float uPower; uniform float uHighlight;
+      varying vec3 vN; varying vec3 vV;
+      void main() {
+        float f = pow(1.0 - abs(dot(normalize(vN), normalize(vV))), uPower);
+        gl_FragColor = vec4(uColor * uIntensity * (1.0 + uHighlight), f);
+      }`,
+  },
+
+  /** Create a rim-glow material. */
+  makeRimGlow({ color = new THREE.Color(1, .8, .5), intensity = 1.5, power = 2.5, side = THREE.FrontSide } = {}) {
+    return new THREE.ShaderMaterial({
+      uniforms: { uColor: { value: color.clone ? color.clone() : new THREE.Color(color) }, uIntensity: { value: intensity }, uPower: { value: power }, uHighlight: { value: 0 } },
+      vertexShader: Shaders.rimGlow.vertex, fragmentShader: Shaders.rimGlow.fragment,
+      transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side,
+    });
+  },
+};
+
+/** CPU-side 3D gradient noise (for distributing particles etc.). */
+const Noise = (() => {
+  const p = new Uint8Array(512);
+  const r = U.rng(1337);
+  const perm = Array.from({ length: 256 }, (_, i) => i);
+  for (let i = 255; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [perm[i], perm[j]] = [perm[j], perm[i]]; }
+  for (let i = 0; i < 512; i++) p[i] = perm[i & 255];
+  const fade = (t) => t * t * t * (t * (t * 6 - 15) + 10);
+  const grad = (h, x, y, z) => { const u = h < 8 ? x : y, v = h < 4 ? y : (h === 12 || h === 14 ? x : z); return ((h & 1) ? -u : u) + ((h & 2) ? -v : v); };
+  function noise3(x, y, z) {
+    const X = Math.floor(x) & 255, Y = Math.floor(y) & 255, Z = Math.floor(z) & 255;
+    x -= Math.floor(x); y -= Math.floor(y); z -= Math.floor(z);
+    const u = fade(x), v = fade(y), w = fade(z);
+    const A = p[X] + Y, AA = p[A] + Z, AB = p[A + 1] + Z, B = p[X + 1] + Y, BA = p[B] + Z, BB = p[B + 1] + Z;
+    const L = (a, b, t) => a + t * (b - a);
+    return L(L(L(grad(p[AA] & 15, x, y, z), grad(p[BA] & 15, x - 1, y, z), u), L(grad(p[AB] & 15, x, y - 1, z), grad(p[BB] & 15, x - 1, y - 1, z), u), v),
+      L(L(grad(p[AA + 1] & 15, x, y, z - 1), grad(p[BA + 1] & 15, x - 1, y, z - 1), u), L(grad(p[AB + 1] & 15, x, y - 1, z - 1), grad(p[BB + 1] & 15, x - 1, y - 1, z - 1), u), v), w);
+  }
+  function fbm3(x, y, z, oct = 4) { let f = 0, a = 0.5; for (let i = 0; i < oct; i++) { f += a * noise3(x, y, z); x = x * 2.03 + 17.1; y = y * 2.03 + 3.3; z = z * 2.03 + 9.7; a *= 0.5; } return f; }
+  return { noise3, fbm3 };
+})();
+
+// =====================================================================
+// 22-starfactory.js
+// =====================================================================
+/* StarFactory — MINIMAL STUB implementing the full public API from ARCHITECTURE.md.
+   The star-shader module replaces this file with the complete implementation. */
+
+class Star extends THREE.Group {
+  constructor(opts = {}) {
+    super();
+    this.opts = Object.assign({ T: 5772, radius: 1, granulation: 1, spots: 0.3, limbDarkening: 0.6, corona: 1, coronaScale: 1.6, convection: 0, activity: 0, rotationSpeed: 0.03, brightness: 1.6, banded: 0, lensflare: false, seed: 1 }, opts);
+    const seg = opts.segments || Q().sphereSeg;
+    this.uniforms = { uColor: { value: StarFactory.colorForT(this.opts.T) }, uBrightness: { value: this.opts.brightness }, uLimb: { value: this.opts.limbDarkening }, uHighlight: { value: 0 }, uTime: Shaders.uTime };
+    const mat = new THREE.ShaderMaterial({
+      uniforms: this.uniforms,
+      vertexShader: `varying vec3 vN; varying vec3 vV; varying vec3 vP; void main(){ vec4 mv = modelViewMatrix*vec4(position,1.); vN = normalize(normalMatrix*normal); vV = normalize(-mv.xyz); vP = position; gl_Position = projectionMatrix*mv; }`,
+      fragmentShader: `${Shaders.noise} uniform vec3 uColor; uniform float uBrightness; uniform float uLimb; uniform float uHighlight; uniform float uTime; varying vec3 vN; varying vec3 vV; varying vec3 vP;
+        void main(){ float mu = max(dot(normalize(vN), normalize(vV)), 0.0); float limb = 1.0 - uLimb*(1.0 - pow(mu, 0.6));
+          float g = 0.85 + 0.15*snoise(normalize(vP)*18.0 + uTime*0.15);
+          gl_FragColor = vec4(uColor*uBrightness*limb*g*(1.0+0.5*uHighlight), 1.0); }`,
+    });
+    this.surface = new THREE.Mesh(new THREE.SphereGeometry(1, seg, Math.round(seg / 2)), mat);
+    this.surface.name = 'starSurface';
+    this.add(this.surface);
+    this.corona = StarFactory.createGlow({ color: StarFactory.colorForT(this.opts.T), size: this.opts.coronaScale * 2.4, intensity: this.opts.corona });
+    this.add(this.corona);
+    this.setRadius(this.opts.radius);
+  }
+  get radius() { return this.opts.radius; }
+  get temperature() { return this.opts.T; }
+  setTemperature(T) { this.opts.T = T; StarFactory.colorForT(T, this.uniforms.uColor.value); this.corona.material.color.copy(this.uniforms.uColor.value).multiplyScalar(this.opts.corona); return this; }
+  setRadius(r) { this.opts.radius = r; this.surface.scale.setScalar(r); this.corona.scale.setScalar(r * this.opts.coronaScale * 2.4); return this; }
+  setParams(p = {}) { Object.assign(this.opts, p); if (p.T !== undefined) this.setTemperature(p.T); if (p.radius !== undefined || p.coronaScale !== undefined) this.setRadius(this.opts.radius); if (p.brightness !== undefined) this.uniforms.uBrightness.value = p.brightness; if (p.limbDarkening !== undefined) this.uniforms.uLimb.value = p.limbDarkening; return this; }
+  setHighlight(v) { this.uniforms.uHighlight.value = v; }
+  update(dt) { this.surface.rotation.y += dt * this.opts.rotationSpeed; }
+  dispose() { this.traverse((o) => { o.geometry?.dispose(); if (o.material && o.material.map !== StarFactory._glowTex) o.material.dispose(); }); }
+}
+
+const StarFactory = {
+  _glowTex: null,
+  create(opts = {}) { return new Star(opts); },
+  colorForT(T, out) { return U.starColor(T, out); },
+  glowTexture() {
+    if (this._glowTex) return this._glowTex;
+    const s = 256, cv = document.createElement('canvas'); cv.width = cv.height = s;
+    const g = cv.getContext('2d'), grd = g.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2);
+    grd.addColorStop(0, 'rgba(255,255,255,1)'); grd.addColorStop(0.2, 'rgba(255,255,255,0.55)'); grd.addColorStop(0.45, 'rgba(255,255,255,0.16)'); grd.addColorStop(1, 'rgba(255,255,255,0)');
+    g.fillStyle = grd; g.fillRect(0, 0, s, s);
+    this._glowTex = new THREE.CanvasTexture(cv); this._glowTex.colorSpace = THREE.SRGBColorSpace;
+    return this._glowTex;
+  },
+  createGlow({ color = new THREE.Color(1, 0.8, 0.5), size = 4, intensity = 1 } = {}) {
+    const m = new THREE.SpriteMaterial({ map: this.glowTexture(), color: color.clone().multiplyScalar(intensity), blending: THREE.AdditiveBlending, depthWrite: false, transparent: true });
+    const sp = new THREE.Sprite(m); sp.scale.setScalar(size); return sp;
+  },
+  createLensflare() { return null; },
+};
+
+// =====================================================================
+// 24-particles.js
+// =====================================================================
+/* ParticleSystems: GPU point sprites. All motion runs in the vertex shader (driven by
+   the shared Shaders.uTime clock), so tens of thousands of particles cost almost no CPU.
+
+   ParticleSystems.createPoints(opts) is the general builder; createCloud / createDisk /
+   createJet / createShell / createWind are ready-made presets built on top of it. */
+
+const ParticleSystems = {
+  /** Scale a desired particle count by the quality setting. */
+  count(n) { return Math.max(24, Math.round(n * Q().particles)); },
+
+  SHAPES: {
+    soft: 'float a = pow(max(0.0, 1.0 - d), 1.7);',
+    dust: 'float a = exp(-d * d * 3.5) * (1.0 - smoothstep(0.85, 1.0, d));',
+    spark: 'float a = exp(-d * d * 18.0) + 0.35 * pow(max(0.0, 1.0 - d), 3.0);',
+    ring: 'float a = smoothstep(0.55, 0.8, d) * (1.0 - smoothstep(0.8, 1.0, d));',
+    disc: 'float a = 1.0 - smoothstep(0.8, 1.0, d);',
+  },
+
+  /**
+   * opts:
+   *  count            number of particles (NOT auto-scaled; wrap with ParticleSystems.count())
+   *  position(i, v3, rng)   fill THREE.Vector3 (or Float32Array of 3*count)
+   *  color(i, c, rng)       fill THREE.Color (or THREE.Color for all, or Float32Array)
+   *  size(i, rng) | number  world-space diameter
+   *  alpha(i, rng) | number
+   *  attributes: { aName: { size: 1..4, fn: (i, rng) => number | number[] } }  extra per-particle data
+   *  uniforms: { uName: { value } }       extra uniforms (shared objects allowed)
+   *  vertexHead: GLSL declared before main (uniforms/attributes/functions you use)
+   *  vertexMotion: GLSL inside main; may modify: vec3 pos, vec3 col, float alpha, float size.
+   *                available: aSeed (0..1 random), uTime, uProgress, position, aColor ...
+   *  shape: 'soft' | 'dust' | 'spark' | 'ring' | 'disc'
+   *  blending: 'add' | 'normal'
+   *  brightness (HDR multiplier, >1 blooms), opacity, maxSize (px), seed, depthTest
+   */
+  createPoints(opts) {
+    const n = Math.max(1, Math.floor(opts.count));
+    const rng = U.rng(opts.seed ?? 7);
+    const pos = new Float32Array(n * 3), col = new Float32Array(n * 3), siz = new Float32Array(n), alp = new Float32Array(n), seed = new Float32Array(n);
+    const v = new THREE.Vector3(), c = new THREE.Color();
+    for (let i = 0; i < n; i++) {
+      if (opts.position instanceof Float32Array) v.fromArray(opts.position, i * 3);
+      else if (opts.position) { v.set(0, 0, 0); opts.position(i, v, rng); } else v.set(0, 0, 0);
+      pos[i * 3] = v.x; pos[i * 3 + 1] = v.y; pos[i * 3 + 2] = v.z;
+      if (opts.color instanceof Float32Array) c.fromArray(opts.color, i * 3);
+      else if (typeof opts.color === 'function') { c.setRGB(1, 1, 1); opts.color(i, c, rng); } else if (opts.color) c.copy(opts.color); else c.setRGB(1, 1, 1);
+      col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b;
+      siz[i] = typeof opts.size === 'function' ? opts.size(i, rng) : (opts.size ?? 0.1);
+      alp[i] = typeof opts.alpha === 'function' ? opts.alpha(i, rng) : (opts.alpha ?? 1);
+      seed[i] = rng();
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    g.setAttribute('aColor', new THREE.BufferAttribute(col, 3));
+    g.setAttribute('aSize', new THREE.BufferAttribute(siz, 1));
+    g.setAttribute('aAlpha', new THREE.BufferAttribute(alp, 1));
+    g.setAttribute('aSeed', new THREE.BufferAttribute(seed, 1));
+    let extraAttr = '';
+    for (const [name, def] of Object.entries(opts.attributes || {})) {
+      const s = def.size || 1, arr = new Float32Array(n * s);
+      for (let i = 0; i < n; i++) { const r = def.fn(i, rng); if (s === 1) arr[i] = r; else for (let k = 0; k < s; k++) arr[i * s + k] = r[k]; }
+      g.setAttribute(name, new THREE.BufferAttribute(arr, s));
+      extraAttr += `attribute ${['float', 'float', 'vec2', 'vec3', 'vec4'][s]} ${name};\n`;
+    }
+    const uniforms = Object.assign({
+      uTime: Shaders.uTime, uViewH: Shaders.uViewH,
+      uProgress: { value: 0 }, uOpacity: { value: opts.opacity ?? 1 }, uBrightness: { value: opts.brightness ?? 1 },
+      uHighlight: { value: 0 }, uMaxSize: { value: opts.maxSize ?? 180 }, uSizeScale: { value: 1 },
+    }, opts.uniforms || {});
+    const vs = /* glsl */`
+      uniform float uTime; uniform float uViewH; uniform float uProgress; uniform float uMaxSize; uniform float uSizeScale;
+      attribute vec3 aColor; attribute float aSize; attribute float aAlpha; attribute float aSeed;
+      ${extraAttr}
+      varying vec3 vColor; varying float vAlpha;
+      ${opts.noise ? Shaders.noise : ''}
+      ${opts.vertexHead || ''}
+      void main() {
+        vec3 pos = position; vec3 col = aColor; float alpha = aAlpha; float size = aSize;
+        ${opts.vertexMotion || ''}
+        vec4 mv = modelViewMatrix * vec4(pos, 1.0);
+        gl_Position = projectionMatrix * mv;
+        float ps = size * uSizeScale * projectionMatrix[1][1] * uViewH * 0.5 / max(0.0001, -mv.z);
+        alpha *= clamp(ps * 0.7, 0.0, 1.0);
+        gl_PointSize = clamp(ps, 1.0, uMaxSize);
+        vColor = col; vAlpha = alpha;
+      }`;
+    const fs = /* glsl */`
+      uniform float uOpacity; uniform float uBrightness; uniform float uHighlight;
+      varying vec3 vColor; varying float vAlpha;
+      void main() {
+        float d = length(gl_PointCoord - 0.5) * 2.0;
+        if (d > 1.0) discard;
+        ${ParticleSystems.SHAPES[opts.shape || 'soft']}
+        a *= vAlpha * uOpacity;
+        if (a < 0.002) discard;
+        gl_FragColor = vec4(vColor * uBrightness * (1.0 + 0.8 * uHighlight), a);
+      }`;
+    const m = new THREE.ShaderMaterial({
+      uniforms, vertexShader: vs, fragmentShader: fs, transparent: true, depthWrite: false,
+      depthTest: opts.depthTest ?? true,
+      blending: opts.blending === 'normal' ? THREE.NormalBlending : THREE.AdditiveBlending,
+    });
+    const pts = new THREE.Points(g, m);
+    pts.frustumCulled = opts.frustumCulled ?? false;
+    pts.userData.highlightUniform = uniforms.uHighlight;
+    return pts;
+  },
+
+  /** Volumetric cloud: particles distributed by fbm density inside an ellipsoid; slow turbulent drift. */
+  createCloud({ count = 20000, radius = 10, scale = [1, 0.6, 1], noiseScale = 0.35, threshold = 0.0, colorA = new THREE.Color(0.35, 0.3, 0.45), colorB = new THREE.Color(0.9, 0.55, 0.45), size = 0.6, alpha = 0.25, drift = 0.15, blending = 'normal', shape = 'dust', seed = 3, brightness = 1 } = {}) {
+    const rng = U.rng(seed);
+    const tmp = new THREE.Vector3();
+    const pts = [];
+    let guard = 0;
+    while (pts.length < count * 3 && guard++ < count * 40) {
+      U.randInSphere(rng, tmp);
+      const d = Noise.fbm3(tmp.x / noiseScale * 0.35 + 5, tmp.y / noiseScale * 0.35, tmp.z / noiseScale * 0.35 - 3, 4) * 1.6 + 0.55 - tmp.length() * 0.55;
+      if (d < threshold + rng() * 0.35) continue;
+      pts.push(tmp.x * radius * scale[0], tmp.y * radius * scale[1], tmp.z * radius * scale[2]);
+    }
+    const n = pts.length / 3;
+    return this.createPoints({
+      count: n, seed, blending, shape, brightness,
+      position: (i, v) => v.set(pts[i * 3], pts[i * 3 + 1], pts[i * 3 + 2]),
+      color: (i, c, r) => c.copy(colorA).lerp(colorB, Math.pow(r(), 1.5)),
+      size: (i, r) => size * (0.5 + r() * 1.2),
+      alpha: (i, r) => alpha * (0.5 + r() * 0.5),
+      uniforms: { uDrift: { value: drift } },
+      vertexHead: 'uniform float uDrift;',
+      vertexMotion: `
+        float t = uTime * 0.05;
+        pos += uDrift * vec3(sin(t + aSeed * 40.0 + pos.y * 0.2), sin(t * 1.3 + aSeed * 23.0 + pos.z * 0.2), cos(t * 0.9 + aSeed * 31.0 + pos.x * 0.2));`,
+    });
+  },
+
+  /** Rotating disk with Kepler-like angular speed (inner parts faster). Uniforms: uOmega, uRadiusScale. */
+  createDisk({ count = 20000, rIn = 1.5, rOut = 10, thickness = 0.08, flare = 1.0, colorInner = new THREE.Color(1, 0.85, 0.6), colorOuter = new THREE.Color(0.6, 0.25, 0.15), omega = 1.2, size = 0.12, alpha = 0.6, spiral = 0, arms = 2, seed = 5, brightness = 1.2, blending = 'add', shape = 'soft' } = {}) {
+    const rad = new Float32Array(count), ang = new Float32Array(count), hei = new Float32Array(count);
+    const rng = U.rng(seed);
+    for (let i = 0; i < count; i++) {
+      const r = rIn + (rOut - rIn) * Math.pow(rng(), 1.35);
+      let a = rng() * Math.PI * 2;
+      if (spiral > 0 && rng() < spiral) a = Math.floor(rng() * arms) * (Math.PI * 2 / arms) + Math.log(r / rIn) * 2.2 + U.gauss(rng) * 0.25;
+      rad[i] = r; ang[i] = a;
+      hei[i] = U.gauss(rng) * thickness * Math.pow(r / rOut, flare) * rOut * 0.5;
+    }
+    const cIn = colorInner, cOut = colorOuter;
+    return this.createPoints({
+      count, seed, blending, shape, brightness,
+      position: (i, v) => v.set(Math.cos(ang[i]) * rad[i], hei[i], Math.sin(ang[i]) * rad[i]),
+      color: (i, c) => c.copy(cIn).lerp(cOut, Math.pow((rad[i] - rIn) / (rOut - rIn), 0.6)),
+      size: (i, r) => size * (0.6 + r() * 0.9) * (0.6 + 0.8 * rad[i] / rOut),
+      alpha: (i, r) => alpha * (0.4 + r() * 0.6),
+      attributes: { aR: { fn: (i) => rad[i] }, aA: { fn: (i) => ang[i] }, aH: { fn: (i) => hei[i] } },
+      uniforms: { uOmega: { value: omega }, uRadiusScale: { value: 1 } },
+      vertexHead: 'uniform float uOmega; uniform float uRadiusScale;',
+      vertexMotion: `
+        float rr = aR * uRadiusScale;
+        float an = aA - uTime * uOmega * pow(max(aR, 0.05), -1.5);
+        pos = vec3(cos(an) * rr, aH, sin(an) * rr);`,
+    });
+  },
+
+  /** Bipolar jets along ±Y. Uniforms: uLength, uSpeed, uOpen (opening), uIntensity. */
+  createJet({ count = 6000, length = 20, radius = 0.6, speed = 6, color = new THREE.Color(0.55, 0.75, 1.0), colorEnd = new THREE.Color(0.9, 0.4, 0.7), size = 0.35, alpha = 0.8, seed = 9, brightness = 2.0, bipolar = true, knots = 0.6 } = {}) {
+    return this.createPoints({
+      count, seed, brightness, shape: 'soft',
+      color: (i, c, r) => c.copy(color),
+      size: (i, r) => size * (0.5 + r()),
+      alpha: (i, r) => alpha * (0.5 + 0.5 * r()),
+      attributes: { aSide: { fn: (i) => (bipolar ? (i % 2 ? 1 : -1) : 1) }, aAng: { fn: (i, r) => r() * Math.PI * 2 }, aRr: { fn: (i, r) => Math.sqrt(r()) }, aSp: { fn: (i, r) => 0.7 + 0.6 * r() } },
+      uniforms: { uLength: { value: length }, uSpeed: { value: speed }, uRadius: { value: radius }, uIntensity: { value: 1 }, uColorEnd: { value: colorEnd.clone() }, uKnots: { value: knots } },
+      vertexHead: 'uniform float uLength; uniform float uSpeed; uniform float uRadius; uniform float uIntensity; uniform vec3 uColorEnd; uniform float uKnots;',
+      vertexMotion: `
+        float life = fract(aSeed * 13.7 + uTime * uSpeed * aSp / uLength);
+        float y = life * uLength;
+        float rr = uRadius * aRr * (0.25 + 1.4 * life);
+        float knot = 1.0 + uKnots * smoothstep(0.6, 1.0, sin(life * 18.0 - uTime * 2.0));
+        pos = vec3(cos(aAng) * rr, aSide * y, sin(aAng) * rr);
+        col = mix(col, uColorEnd, life);
+        alpha *= smoothstep(0.0, 0.04, life) * (1.0 - smoothstep(0.7, 1.0, life)) * uIntensity * knot;
+        size *= (0.6 + life * 1.6);`,
+    });
+  },
+
+  /** Expanding shell of gas. Set uniforms.uRadius / uThickness / uOpacity from the scene. */
+  createShell({ count = 15000, radius = 5, thickness = 0.6, color = (i, c, r, dir) => c.setRGB(1, 0.5, 0.3), clump = 0.8, size = 0.25, alpha = 0.6, seed = 11, brightness = 1.4, blending = 'add', shape = 'soft', squash = [1, 1, 1] } = {}) {
+    const rng = U.rng(seed);
+    const dirs = [];
+    const tmp = new THREE.Vector3();
+    let guard = 0;
+    while (dirs.length < count * 3 && guard++ < count * 30) {
+      U.randDir(rng, tmp);
+      const dens = 0.5 + Noise.fbm3(tmp.x * 2.2 + 3, tmp.y * 2.2, tmp.z * 2.2 - 1, 4) * 1.8;
+      if (rng() > U.lerp(1, U.clamp(dens), clump)) continue;
+      dirs.push(tmp.x * squash[0], tmp.y * squash[1], tmp.z * squash[2]);
+    }
+    const n = dirs.length / 3;
+    const d3 = new THREE.Vector3();
+    return this.createPoints({
+      count: n, seed, blending, shape, brightness,
+      color: (i, c, r) => { d3.set(dirs[i * 3], dirs[i * 3 + 1], dirs[i * 3 + 2]); color(i, c, r, d3); },
+      size: (i, r) => size * (0.5 + r()),
+      alpha: (i, r) => alpha * (0.4 + 0.6 * r()),
+      attributes: { aDir: { size: 3, fn: (i) => [dirs[i * 3], dirs[i * 3 + 1], dirs[i * 3 + 2]] }, aOff: { fn: (i, r) => U.gauss(r) * 0.5 } },
+      uniforms: { uRadius: { value: radius }, uThickness: { value: thickness } },
+      vertexHead: 'uniform float uRadius; uniform float uThickness;',
+      vertexMotion: `
+        pos = aDir * (uRadius + aOff * uThickness);
+        pos += 0.02 * uRadius * vec3(sin(uTime * 0.3 + aSeed * 50.0), cos(uTime * 0.23 + aSeed * 31.0), sin(uTime * 0.27 + aSeed * 17.0));`,
+    });
+  },
+
+  /** Radial outflow (stellar wind) from rIn to rOut, looping. Uniforms: uSpeed, uRIn, uROut. */
+  createWind({ count = 5000, rIn = 1.1, rOut = 8, speed = 1.5, color = new THREE.Color(1, 0.8, 0.6), size = 0.08, alpha = 0.5, seed = 13, brightness = 1.2, flatten = 1 } = {}) {
+    const rng = U.rng(seed);
+    const tmp = new THREE.Vector3();
+    return this.createPoints({
+      count, seed, brightness,
+      color: () => {}, size: (i, r) => size * (0.5 + r()), alpha: (i, r) => alpha * (0.5 + 0.5 * r()),
+      position: (i, v) => v.set(0, 0, 0),
+      attributes: { aDir: { size: 3, fn: () => { U.randDir(rng, tmp); return [tmp.x, tmp.y * flatten, tmp.z]; } } },
+      uniforms: { uSpeed: { value: speed }, uRIn: { value: rIn }, uROut: { value: rOut }, uWindColor: { value: color.clone() } },
+      vertexHead: 'uniform float uSpeed; uniform float uRIn; uniform float uROut; uniform vec3 uWindColor;',
+      vertexMotion: `
+        float life = fract(aSeed * 17.3 + uTime * uSpeed / (uROut - uRIn));
+        pos = normalize(aDir) * mix(uRIn, uROut, life);
+        col = uWindColor;
+        alpha *= smoothstep(0.0, 0.08, life) * (1.0 - life);`,
+    });
+  },
+
+  /** Utility: dispose geometry + material of a Points object. */
+  dispose(pts) { pts.geometry?.dispose(); pts.material?.dispose(); },
+};
+
+// =====================================================================
+// 30-scenemanager.js
+// =====================================================================
+/* SceneManager: renderer, camera + OrbitControls, HDR post-processing (bloom, outline),
+   the deep-space background, picking (hover/click), 3D labels and camera transitions.
+   BaseScene: the base class every 3D scene extends (see ARCHITECTURE.md). */
+
+class Background {
+  constructor(sm) {
+    this.sm = sm;
+    this.group = new THREE.Group();
+    this.group.name = 'background';
+    this.layers = [];
+    this.dim = 1;
+    this.uTwinkle = { value: 1 };
+    this.uDim = { value: 1 };
+    this.bandNormal = new THREE.Vector3(0.22, 0.93, -0.3).normalize();
+    this.centerDir = new THREE.Vector3(0.95, -0.12, 0.28).normalize();
+    this.buildStars();
+  }
+
+  buildStars() {
+    for (const l of this.layers) { this.group.remove(l.points); l.points.geometry.dispose(); l.points.material.dispose(); }
+    this.layers = [];
+    const total = Q().stars;
+    const defs = [
+      { frac: 0.58, radius: 9000, follow: 1.0, size: [0.7, 1.7], seed: 21 },
+      { frac: 0.3, radius: 5200, follow: 0.985, size: [0.9, 2.2], seed: 22 },
+      { frac: 0.12, radius: 2600, follow: 0.94, size: [1.1, 3.0], seed: 23 },
+    ];
+    const tmp = new THREE.Vector3(), c = new THREE.Color(), white = new THREE.Color(1, 1, 1);
+    for (const d of defs) {
+      const n = Math.round(total * d.frac);
+      const r = U.rng(d.seed);
+      const pos = new Float32Array(n * 3), col = new Float32Array(n * 3), size = new Float32Array(n), seed = new Float32Array(n);
+      for (let i = 0; i < n; i++) {
+        if (r() < 0.42) { // concentrate towards the Milky Way band
+          U.randDir(r, tmp);
+          const along = tmp.clone().sub(this.bandNormal.clone().multiplyScalar(tmp.dot(this.bandNormal))).normalize();
+          const lat = U.gauss(r) * 0.16;
+          tmp.copy(along).multiplyScalar(Math.cos(lat)).addScaledVector(this.bandNormal, Math.sin(lat)).normalize();
+        } else U.randDir(r, tmp);
+        tmp.multiplyScalar(d.radius * (0.9 + r() * 0.2));
+        pos.set([tmp.x, tmp.y, tmp.z], i * 3);
+        const x = r();
+        const T = x < 0.45 ? U.lerp(3200, 5000, r()) : x < 0.78 ? U.lerp(5000, 7000, r()) : x < 0.94 ? U.lerp(7000, 12000, r()) : U.lerp(12000, 30000, r());
+        U.blackbody(T, c).lerp(white, 0.25);
+        const mag = Math.pow(r(), 6); // most stars are faint
+        const b = 0.35 + 1.9 * mag;
+        col.set([c.r * b, c.g * b, c.b * b], i * 3);
+        size[i] = U.lerp(d.size[0], d.size[1], Math.pow(r(), 3)) + (mag > 0.6 ? 1.2 : 0);
+        seed[i] = r();
+      }
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+      g.setAttribute('aColor', new THREE.BufferAttribute(col, 3));
+      g.setAttribute('aSize', new THREE.BufferAttribute(size, 1));
+      g.setAttribute('aSeed', new THREE.BufferAttribute(seed, 1));
+      const m = new THREE.ShaderMaterial({
+        uniforms: { uTime: Shaders.uTime, uPR: Shaders.uPixelRatio, uTwinkle: this.uTwinkle, uDim: this.uDim },
+        vertexShader: /* glsl */`
+          uniform float uTime; uniform float uPR; uniform float uTwinkle;
+          attribute vec3 aColor; attribute float aSize; attribute float aSeed;
+          varying vec3 vC;
+          void main() {
+            vec4 mv = modelViewMatrix * vec4(position, 1.0);
+            gl_Position = projectionMatrix * mv;
+            float tw = 1.0 - uTwinkle * 0.45 * step(0.55, aSeed) * (0.5 + 0.5 * sin(uTime * (1.3 + 4.0 * aSeed) + aSeed * 91.0));
+            vC = aColor * tw;
+            gl_PointSize = aSize * uPR * 1.6;
+          }`,
+        fragmentShader: /* glsl */`
+          uniform float uDim; varying vec3 vC;
+          void main() {
+            float d = length(gl_PointCoord - 0.5) * 2.0;
+            float a = exp(-d * d * 5.0);
+            if (a < 0.01) discard;
+            gl_FragColor = vec4(vC * uDim, a);
+          }`,
+        transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+      });
+      const pts = new THREE.Points(g, m);
+      pts.frustumCulled = false;
+      pts.renderOrder = -9;
+      this.group.add(pts);
+      this.layers.push({ points: pts, follow: d.follow });
+    }
+  }
+
+  /** Milky Way band + faint nebulae, baked once into a cube texture used as scene.background. */
+  bakeSky(renderer) {
+    const skyScene = new THREE.Scene();
+    const band = new THREE.Mesh(new THREE.SphereGeometry(100, 64, 32), new THREE.ShaderMaterial({
+      side: THREE.BackSide, depthWrite: false,
+      uniforms: { uN: { value: this.bandNormal }, uC: { value: this.centerDir } },
+      vertexShader: 'varying vec3 vD; void main(){ vD = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+      fragmentShader: /* glsl */`
+        ${Shaders.noise}
+        uniform vec3 uN; uniform vec3 uC; varying vec3 vD;
+        void main() {
+          vec3 d = normalize(vD);
+          float lat = asin(clamp(dot(d, uN), -1.0, 1.0));
+          float n = fbm5(d * 3.2) * 0.5 + 0.5;
+          float band = exp(-pow(lat / (0.2 + 0.08 * n), 2.0));
+          float toC = max(0.0, dot(d, uC));
+          float bulge = exp(-pow(lat / 0.3, 2.0)) * pow(toC, 5.0);
+          float dust = smoothstep(0.1, 0.55, fbm5(d * 7.0 + 3.0) * 0.5 + 0.5) * exp(-pow((lat - 0.02) / 0.06, 2.0));
+          vec3 cool = vec3(0.52, 0.58, 0.8), warm = vec3(1.0, 0.8, 0.58);
+          vec3 col = mix(cool, warm, clamp(bulge * 2.5 + 0.2 * toC, 0.0, 1.0));
+          float I = (band * (0.35 + 0.9 * n * n) + bulge * 1.6) * (1.0 - 0.85 * dust);
+          float grain = snoise(d * 90.0) * 0.5 + 0.5;
+          I *= 0.75 + 0.5 * grain;
+          gl_FragColor = vec4(col * I * 0.07, 1.0);
+        }`,
+    }));
+    skyScene.add(band);
+    const r = U.rng(99);
+    const nebColors = [[0.9, 0.25, 0.35], [0.25, 0.7, 0.75], [0.35, 0.45, 0.95], [0.85, 0.35, 0.6], [0.95, 0.55, 0.3]];
+    for (let i = 0; i < 5; i++) {
+      const dir = U.randDir(r, new THREE.Vector3());
+      const q = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.ShaderMaterial({
+        transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
+        uniforms: { uCol: { value: new THREE.Color(...nebColors[i]) }, uSeed: { value: r() * 50 } },
+        vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+        fragmentShader: /* glsl */`
+          ${Shaders.noise}
+          uniform vec3 uCol; uniform float uSeed; varying vec2 vUv;
+          void main() {
+            vec2 p = vUv - 0.5;
+            float fall = smoothstep(0.5, 0.05, length(p));
+            float n = fbm5(vec3(p * 3.5, uSeed)) * 0.5 + 0.5;
+            float w = fbm3(vec3(p * 9.0, uSeed + 7.0)) * 0.5 + 0.5;
+            float a = fall * pow(n, 2.2) * (0.6 + 0.6 * w);
+            gl_FragColor = vec4(uCol * a * 0.09, 1.0);
+          }`,
+      }));
+      q.position.copy(dir.multiplyScalar(80));
+      q.lookAt(0, 0, 0);
+      q.scale.setScalar(20 + r() * 26);
+      skyScene.add(q);
+    }
+    const size = Settings.quality === 'laag' ? 512 : 1024;
+    const rt = new THREE.WebGLCubeRenderTarget(size, { type: THREE.HalfFloatType, generateMipmaps: false });
+    const cam = new THREE.CubeCamera(0.1, 1000, rt);
+    cam.update(renderer, skyScene);
+    skyScene.traverse((o) => { o.geometry?.dispose(); o.material?.dispose(); });
+    if (this.skyRT) this.skyRT.dispose();
+    this.skyRT = rt;
+    return rt.texture;
+  }
+
+  setDim(v) { this.dim = v; this.uDim.value = v; }
+
+  update(camera) {
+    for (const l of this.layers) l.points.position.copy(camera.position).multiplyScalar(l.follow);
+    this.uTwinkle.value = Settings.reducedMotion ? 0 : 1;
+  }
+}
+
+/** HTML labels anchored to 3D objects. Each label is a real <button>, so it is keyboard accessible. */
+class LabelLayer {
+  constructor(root, sm) { this.root = root; this.sm = sm; this.items = []; this._v = new THREE.Vector3(); }
+  add({ object = null, position = null, offset = null, text, infoId, color = null, always = false }) {
+    const el = U.el('button', { class: 'scene-label' + (always ? ' always' : ''), type: 'button', 'aria-label': `${text}: uitleg openen` }, text);
+    if (color) el.style.setProperty('--dot', color);
+    el.addEventListener('click', (e) => { e.stopPropagation(); bus.emit('pick', { infoId, source: 'label' }); });
+    el.addEventListener('pointerenter', () => this.sm.setHoverByInfo(infoId, true));
+    el.addEventListener('pointerleave', () => this.sm.setHoverByInfo(infoId, false));
+    el.addEventListener('focus', () => this.sm.setHoverByInfo(infoId, true));
+    el.addEventListener('blur', () => this.sm.setHoverByInfo(infoId, false));
+    this.root.append(el);
+    const item = { el, object, position: position ? new THREE.Vector3().copy(position) : null, offset: offset ? new THREE.Vector3().copy(offset) : null, infoId, visible: true };
+    item.setText = (t) => { el.textContent = t; el.setAttribute('aria-label', `${t}: uitleg openen`); };
+    item.setVisible = (v) => { item.visible = v; el.style.display = v ? '' : 'none'; };
+    item.remove = () => { el.remove(); this.items = this.items.filter((x) => x !== item); };
+    this.items.push(item);
+    return item;
+  }
+  clear() { for (const i of this.items) i.el.remove(); this.items = []; }
+  setHot(infoId, hot) { for (const i of this.items) if (i.infoId === infoId) i.el.classList.toggle('hot', hot); }
+  update() {
+    const cam = this.sm.camera, w = this.sm.width, h = this.sm.height, v = this._v;
+    for (const it of this.items) {
+      if (!it.visible) continue;
+      if (it.object) { it.object.getWorldPosition(v); if (!it.object.visible && !it.always) { it.el.classList.add('behind'); continue; } } else v.set(0, 0, 0);
+      if (it.position) v.add(it.position);
+      if (it.offset) v.add(it.offset);
+      v.project(cam);
+      const behind = v.z > 1 || v.z < -1 || Math.abs(v.x) > 1.2 || Math.abs(v.y) > 1.2;
+      it.el.classList.toggle('behind', behind);
+      if (!behind) it.el.style.transform = `translate(${((v.x + 1) / 2) * w}px, ${((1 - v.y) / 2) * h}px) translate(-50%, -50%)`;
+    }
+  }
+}
+
+class SceneManager {
+  constructor(container) {
+    this.container = container;
+    this.width = container.clientWidth || innerWidth;
+    this.height = container.clientHeight || innerHeight;
+    const r = this.renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance', stencil: false });
+    r.setClearColor(0x000000, 1);
+    r.toneMapping = THREE.ACESFilmicToneMapping;
+    r.toneMappingExposure = 1.0;
+    r.outputColorSpace = THREE.SRGBColorSpace;
+    r.info.autoReset = false;
+    container.appendChild(r.domElement);
+    r.domElement.setAttribute('tabindex', '0');
+    r.domElement.setAttribute('aria-label', '3D-weergave. Gebruik de knop "In beeld" of de labels om onderdelen met het toetsenbord te kiezen.');
+
+    this.scene = new THREE.Scene();
+    this.camera = new THREE.PerspectiveCamera(50, this.width / this.height, 0.02, 40000);
+    this.camera.position.set(0, 3, 14);
+    this.stage = new THREE.Group();
+    this.stage.name = 'stage';
+    this.scene.add(this.stage);
+
+    this.controls = new OrbitControls(this.camera, r.domElement);
+    Object.assign(this.controls, { enableDamping: true, dampingFactor: 0.07, rotateSpeed: 0.55, zoomSpeed: 0.9, panSpeed: 0.6, autoRotateSpeed: 0.35 });
+    this.controls.addEventListener('start', () => { this.tween = null; this.userInteracting = true; });
+    this.controls.addEventListener('end', () => { this.userInteracting = false; });
+
+    this.background = new Background(this);
+    this.scene.add(this.background.group);
+    this.scene.background = this.background.bakeSky(r);
+    this.scene.backgroundIntensity = 1;
+
+    this.dynScale = 1;
+    this.applyPixelRatio();
+    this.buildComposer();
+
+    this.labels = new LabelLayer(document.getElementById('labels'), this);
+    this.pickables = [];
+    this.hovered = null;
+    this.raycaster = new THREE.Raycaster();
+    this.raycaster.params.Points.threshold = 0.15;
+    this.raycaster.params.Line.threshold = 0.1;
+    this.pointer = new THREE.Vector2(9, 9);
+    this.pointerPx = { x: 0, y: 0 };
+    this.needsPick = false;
+    this.tooltip = document.getElementById('tooltip');
+    this.clock = new THREE.Clock();
+    this.fps = 60; this._fpsAcc = 0; this._fpsN = 0; this._slowT = 0; this._fastT = 0;
+    this.onUpdate = null;
+    this.tween = null;
+    this.bindPointer();
+    new ResizeObserver(() => this.resize()).observe(container);
+    bus.on('settings', ({ key }) => { if (key === 'quality') this.applyQuality(); });
+  }
+
+  // ------------------------------------------------------------------ rendering setup
+  applyPixelRatio() {
+    const pr = Math.min(window.devicePixelRatio || 1, Q().pixelRatio) * this.dynScale;
+    this.pixelRatio = Math.max(0.5, pr);
+    this.renderer.setPixelRatio(this.pixelRatio);
+    this.renderer.setSize(this.width, this.height, false);
+    Shaders.uViewH.value = this.height * this.pixelRatio;
+    Shaders.uPixelRatio.value = this.pixelRatio;
+  }
+
+  buildComposer() {
+    const q = Q();
+    const w = Math.floor(this.width * this.pixelRatio), h = Math.floor(this.height * this.pixelRatio);
+    const rt = new THREE.WebGLRenderTarget(w, h, { type: THREE.HalfFloatType, samples: q.antialias ? 4 : 0 });
+    if (this.composer) this.composer.dispose();
+    this.composer = new EffectComposer(this.renderer, rt);
+    this.composer.setPixelRatio(this.pixelRatio);
+    this.composer.setSize(this.width, this.height);
+    this.renderPass = new RenderPass(this.scene, this.camera);
+    this.composer.addPass(this.renderPass);
+    this.extraPasses = this.extraPasses || [];
+    for (const p of this.extraPasses) this.composer.addPass(p);
+    this.outlinePass = null;
+    if (q.outline) {
+      const op = new OutlinePass(new THREE.Vector2(this.width, this.height), this.scene, this.camera);
+      Object.assign(op, { edgeStrength: 3.2, edgeGlow: 0.6, edgeThickness: 1.4, pulsePeriod: 0 });
+      op.visibleEdgeColor.set(0xffd08a); op.hiddenEdgeColor.set(0x6a5030);
+      op.enabled = false;
+      this.outlinePass = op;
+      this.composer.addPass(op);
+    }
+    const br = q.bloomRes;
+    this.bloomPass = new UnrealBloomPass(new THREE.Vector2(this.width * br, this.height * br), 0.9, 0.55, 0.82);
+    this.composer.addPass(this.bloomPass);
+    this.outputPass = new OutputPass();
+    this.composer.addPass(this.outputPass);
+    this.setRenderSettings(this.renderSettings || {});
+  }
+
+  /** Scene-specific post settings: { bloomStrength, bloomRadius, bloomThreshold, exposure, backgroundDim } */
+  setRenderSettings(s = {}) {
+    this.renderSettings = s;
+    const q = Q();
+    this.bloomPass.strength = (s.bloomStrength ?? 0.9) * q.bloomStrength;
+    this.bloomPass.radius = s.bloomRadius ?? 0.55;
+    this.bloomPass.threshold = s.bloomThreshold ?? 0.82;
+    this.renderer.toneMappingExposure = s.exposure ?? 1.0;
+    this.background.setDim(s.backgroundDim ?? 1);
+    this.scene.backgroundIntensity = s.backgroundDim ?? 1;
+  }
+
+  /** Add a post-processing pass (inserted before outline/bloom/output). Remove it again in scene.exit(). */
+  addPass(pass) { this.extraPasses.push(pass); this.composer.insertPass(pass, 1 + this.extraPasses.length - 1); return pass; }
+  removePass(pass) { this.extraPasses = this.extraPasses.filter((p) => p !== pass); this.composer.removePass(pass); }
+
+  applyQuality() {
+    this.applyPixelRatio();
+    this.background.buildStars();
+    this.scene.background = this.background.bakeSky(this.renderer);
+    this.buildComposer();
+  }
+
+  resize() {
+    this.width = this.container.clientWidth || innerWidth;
+    this.height = this.container.clientHeight || innerHeight;
+    this.camera.aspect = this.width / this.height;
+    this.camera.updateProjectionMatrix();
+    this.applyPixelRatio();
+    this.composer.setPixelRatio(this.pixelRatio);
+    this.composer.setSize(this.width, this.height);
+    if (this.outlinePass) this.outlinePass.setSize(this.width * this.pixelRatio, this.height * this.pixelRatio);
+    bus.emit('resize', { width: this.width, height: this.height });
+  }
+
+  /** Render the background (stars + Milky Way) into a cube map, e.g. for gravitational lensing. */
+  captureEnvironment(size = 1024) {
+    const rt = new THREE.WebGLCubeRenderTarget(size, { type: THREE.HalfFloatType, generateMipmaps: false });
+    const cc = new THREE.CubeCamera(1, 40000, rt);
+    const stageVis = this.stage.visible;
+    this.stage.visible = false;
+    const saved = this.background.layers.map((l) => l.points.position.clone());
+    for (const l of this.background.layers) l.points.position.set(0, 0, 0);
+    const oldDim = this.background.uDim.value;
+    this.background.uDim.value = 1;
+    cc.update(this.renderer, this.scene);
+    this.background.uDim.value = oldDim;
+    this.background.layers.forEach((l, i) => l.points.position.copy(saved[i]));
+    this.stage.visible = stageVis;
+    return rt;
+  }
+
+  // ------------------------------------------------------------------ camera
+  /** Fly the camera. preset: { position:[x,y,z]|Vector3, target, fov, minDistance, maxDistance }. */
+  flyTo(preset, duration = 2.0, instant = false) {
+    const toV = (a) => (a instanceof THREE.Vector3 ? a.clone() : new THREE.Vector3(...a));
+    const p = toV(preset.position || [0, 2, 12]);
+    const t = toV(preset.target || [0, 0, 0]);
+    this.controls.minDistance = preset.minDistance ?? 0.1;
+    this.controls.maxDistance = preset.maxDistance ?? 5000;
+    if (preset.fov && preset.fov !== this.camera.fov) { this.camera.fov = preset.fov; this.camera.updateProjectionMatrix(); }
+    if (instant || Settings.reducedMotion || duration <= 0) {
+      this.tween = null;
+      this.camera.position.copy(p); this.controls.target.copy(t); this.controls.update();
+      return Promise.resolve();
+    }
+    return new Promise((resolve) => {
+      this.tween = { p0: this.camera.position.clone(), t0: this.controls.target.clone(), p1: p, t1: t, time: 0, duration, resolve };
+    });
+  }
+
+  stepTween(dt) {
+    const tw = this.tween;
+    if (!tw) return;
+    tw.time += dt;
+    const k = U.ease.inOutCubic(Math.min(1, tw.time / tw.duration));
+    // arc slightly outward so the camera does not cut through objects
+    const mid = tw.p0.clone().lerp(tw.p1, k);
+    const bulge = Math.sin(k * Math.PI) * 0.12 * tw.p0.distanceTo(tw.p1);
+    const out = mid.clone().sub(tw.t0.clone().lerp(tw.t1, k)).normalize().multiplyScalar(bulge);
+    this.camera.position.copy(mid.add(out));
+    this.controls.target.copy(tw.t0.clone().lerp(tw.t1, k));
+    if (k >= 1) { this.tween = null; tw.resolve(); }
+  }
+
+  /** Short white flash (ignition, supernova). Respects "minder beweging". */
+  flash({ intensity = 1, duration = 1.2 } = {}) {
+    const el = document.getElementById('flash');
+    if (!el) return;
+    const peak = Settings.reducedMotion ? Math.min(0.18, intensity * 0.18) : Math.min(0.95, intensity);
+    const attack = Settings.reducedMotion ? 0.6 : 0.08;
+    el.animate([{ opacity: 0 }, { opacity: peak, offset: attack / (duration + attack) }, { opacity: 0 }], { duration: (duration + attack) * 1000, easing: 'ease-out' });
+  }
+
+  // ------------------------------------------------------------------ picking
+  setPickables(list) {
+    if (this.hovered) this.applyHover(this.hovered, false);
+    this.hovered = null;
+    this.pickables = list || [];
+    this.hideTooltip();
+  }
+
+  bindPointer() {
+    const el = this.renderer.domElement;
+    let down = null;
+    el.addEventListener('pointermove', (e) => {
+      const r = el.getBoundingClientRect();
+      this.pointer.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+      this.pointerPx = { x: e.clientX, y: e.clientY };
+      this.pointerType = e.pointerType;
+      if (e.pointerType === 'mouse') this.needsPick = true;
+    });
+    el.addEventListener('pointerleave', () => { this.pointer.set(9, 9); this.needsPick = true; });
+    el.addEventListener('pointerdown', (e) => { down = { x: e.clientX, y: e.clientY, t: performance.now() }; });
+    el.addEventListener('pointerup', (e) => {
+      if (!down) return;
+      const moved = Math.hypot(e.clientX - down.x, e.clientY - down.y), dt = performance.now() - down.t;
+      down = null;
+      if (moved > 7 || dt > 600) return;
+      const r = el.getBoundingClientRect();
+      this.pointer.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+      const hit = this.pick();
+      if (hit) bus.emit('pick', { infoId: hit.infoId, entry: hit, source: '3d' });
+    });
+  }
+
+  /** Returns the best pickable entry under the pointer (highest priority, then nearest). */
+  pick() {
+    if (!this.pickables.length || Math.abs(this.pointer.x) > 1) return null;
+    this.raycaster.setFromCamera(this.pointer, this.camera);
+    const objs = this.pickables.filter((p) => p.enabled !== false).map((p) => p.object);
+    let hits;
+    try { hits = this.raycaster.intersectObjects(objs, true); } catch (e) { return null; }
+    let best = null, bestPri = -Infinity, bestDist = Infinity;
+    for (const h of hits) {
+      let o = h.object, entry = null;
+      while (o && !entry) { entry = o.userData.pickEntry; o = o.parent; }
+      if (!entry || entry.enabled === false) continue;
+      const pri = entry.priority || 0;
+      if (pri > bestPri || (pri === bestPri && h.distance < bestDist)) { best = entry; bestPri = pri; bestDist = h.distance; }
+    }
+    return best;
+  }
+
+  applyHover(entry, on) {
+    if (!entry) return;
+    try {
+      if (entry.onHover) { entry.onHover(on); } else {
+        const t = entry.highlightTarget || entry.object;
+        let handled = false;
+        if (typeof t.setHighlight === 'function') { t.setHighlight(on ? 1 : 0); handled = true; }
+        t.traverse?.((o) => {
+          const u = o.userData?.highlightUniform || o.material?.uniforms?.uHighlight;
+          if (u) { u.value = on ? 1 : 0; handled = true; }
+        });
+        if (!handled && this.outlinePass) {
+          const meshes = [];
+          t.traverse?.((o) => { if ((o.isMesh || o.isLine) && o.visible) meshes.push(o); });
+          this.outlinePass.selectedObjects = on ? meshes : [];
+          this.outlinePass.enabled = on && meshes.length > 0;
+        }
+      }
+    } catch (e) { console.warn('highlight failed', e); }
+    this.labels.setHot(entry.infoId, on);
+    this.renderer.domElement.parentElement.classList.toggle('hovering', on);
+  }
+
+  /** Highlight every pickable with this infoId (used by labels and the objects list). */
+  setHoverByInfo(infoId, on) {
+    for (const p of this.pickables) if (p.infoId === infoId) this.applyHover(p, on);
+  }
+
+  updateHover() {
+    if (!this.needsPick) return;
+    this.needsPick = false;
+    const hit = this.userInteracting ? null : this.pick();
+    if (hit !== this.hovered) {
+      if (this.hovered) this.applyHover(this.hovered, false);
+      this.hovered = hit;
+      if (hit) this.applyHover(hit, true);
+    }
+    if (hit) this.showTooltip(hit); else this.hideTooltip();
+  }
+
+  showTooltip(entry) {
+    const info = Content.get(entry.infoId);
+    const title = entry.label || info?.title || entry.infoId;
+    const sub = entry.tooltip || info?.tooltip || '';
+    this.tooltip.innerHTML = `<b>${title}</b>${sub ? `<span>${sub}</span>` : ''}<span class="tt-hint">${Content.ui.tooltipHint}</span>`;
+    this.tooltip.hidden = false;
+    const tw = this.tooltip.offsetWidth, th = this.tooltip.offsetHeight;
+    const x = Math.min(this.pointerPx.x, innerWidth - tw - 24), y = Math.min(this.pointerPx.y, innerHeight - th - 24);
+    this.tooltip.style.left = x + 'px'; this.tooltip.style.top = y + 'px';
+  }
+  hideTooltip() { this.tooltip.hidden = true; }
+
+  /** Screen position of a world point: { x, y, visible } in CSS pixels. */
+  project(v3) {
+    const v = v3.clone().project(this.camera);
+    return { x: ((v.x + 1) / 2) * this.width, y: ((1 - v.y) / 2) * this.height, visible: v.z < 1 && v.z > -1 };
+  }
+
+  // ------------------------------------------------------------------ loop
+  start() { this.renderer.setAnimationLoop(() => this.tick()); }
+
+  tick() {
+    const dt = Math.min(0.1, this.clock.getDelta());
+    this.renderer.info.reset();
+    Shaders.uTime.value += dt;
+    this.measureFps(dt);
+    this.stepTween(dt);
+    this.controls.autoRotate = Settings.autoRotate && !Settings.reducedMotion && !this.tween;
+    this.controls.update();
+    this.background.update(this.camera);
+    try { this.onUpdate?.(dt); } catch (e) { console.error('update error', e); }
+    this.updateHover();
+    this.labels.update();
+    this.composer.render(dt);
+  }
+
+  measureFps(dt) {
+    this._fpsAcc += dt; this._fpsN++;
+    if (this._fpsAcc >= 0.5) {
+      this.fps = this._fpsN / this._fpsAcc;
+      this._fpsAcc = 0; this._fpsN = 0;
+      bus.emit('fps', this.fps);
+      // dynamic resolution: keep the frame rate up on slower GPUs
+      if (this.fps < 40) { this._slowT += 0.5; this._fastT = 0; } else if (this.fps > 57) { this._fastT += 0.5; this._slowT = 0; } else { this._slowT = 0; this._fastT = 0; }
+      if (this._slowT >= 2 && this.dynScale > 0.6) { this.dynScale = Math.max(0.6, this.dynScale - 0.15); this._slowT = 0; this.resize(); }
+      if (this._fastT >= 6 && this.dynScale < 1) { this.dynScale = Math.min(1, this.dynScale + 0.1); this._fastT = 0; this.resize(); }
+    }
+  }
+}
+
+/** Base class for all 3D scenes. Subclasses override build/enter/update/exit/getCameraPreset. */
+class BaseScene {
+  constructor(ctx) {
+    this.ctx = ctx;           // { sm, app }
+    this.sm = ctx.sm;
+    this.app = ctx.app;
+    this.group = new THREE.Group();
+    this.pickables = [];
+    this.labelDefs = [];
+    this.params = {};
+    this.time = 0;            // seconds since enter()
+    this.built = false;
+    this._disposables = [];
+    /** Post settings applied when the scene becomes active. */
+    this.renderSettings = { bloomStrength: 0.9, bloomRadius: 0.55, bloomThreshold: 0.82, exposure: 1.0, backgroundDim: 1 };
+  }
+  get reducedMotion() { return Settings.reducedMotion; }
+  get quality() { return Q(); }
+
+  /** Create objects (called once, lazily, before the first enter). */
+  build() {}
+  /** Called every time the scene becomes active. params: { variant, mass, stage, path, ... } */
+  enter(params) {}
+  /** Per frame. dt = real seconds. state = current simulation state (may be null), see Evolution.stateAt. */
+  update(dt, state) {}
+  /** Called when the scene is deactivated. Remove extra passes etc. here. */
+  exit() {}
+  /** Default camera placement for this scene. */
+  getCameraPreset() { return { position: [0, 2, 12], target: [0, 0, 0], minDistance: 1, maxDistance: 400 }; }
+  /** Optional named camera focus ('disk', 'core', ...) -> preset or null. */
+  getFocus(name) { return null; }
+
+  /** Register an object as clickable. opts: { priority, highlightTarget, label, tooltip, onHover(on) } */
+  addPickable(object, infoId, opts = {}) {
+    const entry = { object, infoId, priority: opts.priority ?? 0, highlightTarget: opts.highlightTarget || object, label: opts.label, tooltip: opts.tooltip, onHover: opts.onHover, enabled: true };
+    object.userData.pickEntry = entry;
+    this.pickables.push(entry);
+    return entry;
+  }
+  removePickable(object) { const i = this.pickables.findIndex((p) => p.object === object); if (i >= 0) this.pickables.splice(i, 1); delete object.userData.pickEntry; }
+  /** Declare an HTML label for an object (created when the scene is active). opts: { text, offset:[x,y,z], color, always } */
+  addLabel(object, infoId, opts = {}) {
+    const def = { object, infoId, text: opts.text || Content.get(infoId)?.title || infoId, offset: opts.offset ? new THREE.Vector3(...opts.offset) : null, color: opts.color, always: opts.always, handle: null };
+    this.labelDefs.push(def);
+    if (this._active) def.handle = this.sm.labels.add(def);
+    return def;
+  }
+  /** Invisible sphere used as a click target for particle clouds etc. (lower priority by default). */
+  makeProxy(radius, infoId, opts = {}) {
+    const m = new THREE.Mesh(new THREE.SphereGeometry(radius, 16, 12), new THREE.MeshBasicMaterial({ visible: false }));
+    if (opts.position) m.position.set(...opts.position);
+    if (opts.scale) m.scale.set(...opts.scale);
+    this.group.add(m);
+    this.addPickable(m, infoId, Object.assign({ priority: -1 }, opts));
+    return m;
+  }
+  track(...things) { this._disposables.push(...things); return things[0]; }
+  /** Small on-screen HUD for this scene (e.g. phase captions, a live counter). html=null removes it.
+      Removed automatically when the scene is left. Returns the element. */
+  setHud(html, opts = {}) {
+    let el = this._hud && this._hud.isConnected ? this._hud : null;
+    if (html === null) { el?.remove(); this._hud = null; return null; }
+    if (!el) { el = U.el('div', { class: 'scene-hud', role: 'status', 'aria-live': 'polite' }); document.getElementById('labels').append(el); this._hud = el; }
+    if (el._html !== html) { el.innerHTML = html; el._html = html; }
+    el.classList.toggle('hud-wide', !!opts.wide);
+    return el;
+  }
+
+  dispose() {
+    this.group.traverse((o) => {
+      if (o.userData?.shared) return;
+      o.geometry?.dispose?.();
+      const mats = Array.isArray(o.material) ? o.material : o.material ? [o.material] : [];
+      for (const m of mats) { if (!m.userData?.shared) m.dispose(); }
+      if (typeof o.dispose === 'function' && !o.isScene && o !== this.group) { try { o.dispose(); } catch (e) { /* already disposed */ } }
+    });
+    for (const d of this._disposables) { try { d.dispose?.(); } catch (e) { /* ignore */ } }
+    this._disposables = [];
+    this.group.clear();
+    this.pickables = [];
+    this.labelDefs = [];
+    this.built = false;
+  }
+}
+
+// =====================================================================
+// 40-evolution.js
+// =====================================================================
+/* Evolution — MINIMAL STUB of the API in ARCHITECTURE.md (replaced by the full model). */
+
+const Evolution = {
+  MIN_MASS: 0.01, MAX_MASS: 150,
+
+  category(mass, lowZ = false) {
+    if (mass < 0.08) return 'bruineDwerg';
+    if (mass < 0.5) return 'rodeDwerg';
+    if (mass < 8) return 'zonachtig';
+    if (mass < 25) return 'zwaar';
+    if (lowZ && mass >= 130) return 'paarInstabiliteit';
+    return 'zeerZwaar';
+  },
+
+  zams(mass) {
+    const L = mass < 0.43 ? 0.23 * Math.pow(mass, 2.3) : mass < 2 ? Math.pow(mass, 4) : mass < 55 ? 1.4 * Math.pow(mass, 3.5) : 32000 * mass;
+    const R = mass < 1 ? Math.pow(mass, 0.8) : Math.pow(mass, 0.57);
+    const T = PHYS.Tsun * Math.pow(L / (R * R), 0.25);
+    return { L, R, T };
+  },
+
+  msLifetime(mass) { return 1e10 * Math.pow(mass, -2.5); },
+
+  getPath(mass, opts = {}) {
+    const lowZ = !!opts.lowZ;
+    const cat = this.category(mass, lowZ);
+    const z = this.zams(mass);
+    const ms = this.msLifetime(mass);
+    const lg = Math.log10;
+    const S = (id, sceneId, label, duration, pts, extra = {}) => Object.assign({ id, sceneId, infoId: extra.infoId || sceneId, label, short: extra.short || label, kind: extra.kind || 'evolution', params: extra.params || {}, duration, track: pts }, extra);
+    const P = (f, L, T, R, M = mass) => [f, lg(Math.max(L, 1e-9)), lg(T), R, M];
+    const st = [
+      S('cloud', 'cloud', 'Moleculaire wolk', 1e7, [P(0, 1e-6, 15, 2e7), P(1, 1e-6, 15, 1e7)], { kind: 'formation', short: 'Wolk' }),
+      S('collapse', 'collapse', 'Instorting', 2e5, [P(0, 1e-5, 20, 5e6), P(1, 1e-3, 30, 1e5)], { kind: 'formation', short: 'Instorting' }),
+      S('protostar', 'protostar', 'Protoster', 1e5, [P(0, 10 * Math.max(z.L, 0.01), 3000, 5), P(1, 5 * Math.max(z.L, 0.01), 3500, 3)], { kind: 'formation' }),
+      S('jets', 'jets', 'Jets', 5e5, [P(0, 5 * Math.max(z.L, 0.01), 3500, 3), P(1, 3 * Math.max(z.L, 0.01), 3800, 2.5)], { kind: 'formation', short: 'Jets' }),
+      S('ttauri', 'ttauri', 'T Tauri-fase', 1e7, [P(0, 3 * Math.max(z.L, 0.01), 3800, 2.5), P(1, 1.2 * z.L, 4200, 1.3 * z.R)], { kind: 'formation', short: 'T Tauri' }),
+    ];
+    if (cat === 'bruineDwerg') {
+      st.push(S('deuterium', 'ignition', 'Deuteriumfusie', 1e7, [P(0, 1e-3, 2800, 0.2), P(1, 1e-4, 2400, 0.12)], { kind: 'formation', params: { variant: 'deuterium' }, short: 'Deuterium' }));
+      st.push(S('brownDwarf', 'brownDwarf', 'Bruine dwerg', 1e13, [P(0, 1e-4, 2400, 0.12), P(1, 1e-8, 300, 0.09)]));
+    } else {
+      st.push(S('ignition', 'ignition', 'Ontsteking', 3e7, [P(0, 1.2 * z.L, 4500, 1.3 * z.R), P(1, z.L, z.T, z.R)], { kind: 'formation' }));
+      st.push(S('mainSequence', cat === 'rodeDwerg' ? 'redDwarf' : 'mainSequence', 'Hoofdreeks', ms, [P(0, z.L, z.T, z.R), P(1, z.L * 2, z.T * 0.97, z.R * 1.5)], { kind: 'formation', infoId: 'mainSequence' }));
+      if (cat === 'rodeDwerg') st.push(S('whiteDwarf', 'whiteDwarf', 'Heliumwitte dwerg', 1e12, [P(0, 1e-2, 20000, 0.015, 0.2), P(1, 1e-5, 4000, 0.015, 0.2)], { params: { variant: 'He' } }));
+      if (cat === 'zonachtig') {
+        st.push(S('redGiant', 'redGiant', 'Rode reus', ms * 0.1, [P(0, z.L * 2, z.T * 0.97, z.R * 1.5), P(1, 2000 * z.L, 3200, 150)]));
+        st.push(S('planetaryNebula', 'planetaryNebula', 'Planetaire nevel', 2e4, [P(0, 5000, 30000, 0.2, 0.6), P(1, 100, 100000, 0.03, 0.6)]));
+        st.push(S('whiteDwarf', 'whiteDwarf', 'Witte dwerg', 1e10, [P(0, 1, 50000, 0.013, 0.6), P(1, 1e-4, 4000, 0.013, 0.6)]));
+      }
+      if (cat === 'zwaar' || cat === 'zeerZwaar' || cat === 'paarInstabiliteit') {
+        st.push(S('supergiant', 'supergiant', 'Superreus', ms * 0.1, [P(0, z.L * 1.5, z.T * 0.9, z.R * 1.3), P(1, z.L * 2, 3500, 800)]));
+        if (cat === 'paarInstabiliteit') st.push(S('pairInstability', 'pairInstability', 'Paarinstabiliteitssupernova', 1, [P(0, 1e10, 20000, 100), P(1, 1e9, 10000, 1e5)]));
+        else {
+          st.push(S('coreCollapse', 'coreCollapse', 'Supernova', 1, [P(0, 1e9, 20000, 800), P(1, 1e8, 10000, 1e5)]));
+          if (cat === 'zwaar') st.push(S('neutronStar', 'neutronStar', 'Neutronenster', 1e10, [P(0, 1e-1, 1e6, 1.4e-5, 1.4), P(1, 1e-6, 1e5, 1.4e-5, 1.4)], { params: { variant: 'pulsar' } }));
+          else st.push(S('blackHole', 'blackHole', 'Zwart gat', 1e20, [P(0, 1e-12, 1000, 1e-4, 10), P(1, 1e-12, 1000, 1e-4, 10)]));
+        }
+      }
+    }
+    let t = 0;
+    for (const s of st) { s.start = t; t += s.duration; }
+    const birth = st.find((s) => s.id === 'protostar').start;
+    return { mass, lowZ, category: cat, categoryLabel: cat, fate: '', summary: '', stages: st, totalAge: t, birth, msLifetime: ms, remnant: { type: '', mass: 0 } };
+  },
+
+  stageIndexAt(path, age) {
+    const s = path.stages;
+    for (let i = s.length - 1; i >= 0; i--) if (age >= s[i].start) return i;
+    return 0;
+  },
+
+  stateAt(path, age) {
+    const i = this.stageIndexAt(path, age), stage = path.stages[i];
+    const f = U.clamp((age - stage.start) / stage.duration);
+    const tr = stage.track;
+    let a = tr[0], b = tr[tr.length - 1];
+    for (let k = 0; k < tr.length - 1; k++) if (f >= tr[k][0] && f <= tr[k + 1][0]) { a = tr[k]; b = tr[k + 1]; break; }
+    const t = b[0] > a[0] ? (f - a[0]) / (b[0] - a[0]) : 0;
+    const logL = U.lerp(a[1], b[1], t), logT = U.lerp(a[2], b[2], t), R = U.logLerp(Math.max(a[3], 1e-9), Math.max(b[3], 1e-9), t), M = U.lerp(a[4], b[4], t);
+    const T = Math.pow(10, logT), L = Math.pow(10, logL);
+    const sp = U.spectralType(T);
+    return { age, stageIndex: i, stage, f, L, T, R, M, logL, logT, spectral: sp, lumClass: 'V', mk: sp.label + 'V', starAge: age - path.birth };
+  },
+
+  sampleTrack(path, n = 400) {
+    const out = [];
+    for (const [i, s] of path.stages.entries()) for (const p of s.track) out.push({ logL: p[1], logT: p[2], stageIndex: i, f: p[0] });
+    return out;
+  },
+};
+
+// =====================================================================
+// 64-infopanel.js
+// =====================================================================
+/* InfoPanel: the slide-in explanation panel. Renders Content.info entries:
+   title, 2–4 paragraphs, key numbers, "Wist je dat?", "Dieper duiken", actions,
+   related links and the Vorige fase / Volgende fase / Bekijk in 3D buttons. */
+
+class InfoPanel {
+  constructor(app) {
+    this.app = app;
+    this.el = document.getElementById('info-panel');
+    this.scroll = document.getElementById('ip-scroll');
+    this.currentId = null;
+    this.history = [];
+    document.getElementById('ip-close').addEventListener('click', () => this.close());
+    this.el.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.stopPropagation(); this.close(); } });
+  }
+
+  get isOpen() { return this.el.classList.contains('open'); }
+
+  open(infoId, { focus = false } = {}) {
+    const info = Content.get(infoId);
+    if (!info) { console.warn('[info] geen uitleg gevonden voor', infoId); return false; }
+    if (this.currentId && this.currentId !== infoId) this.history.push(this.currentId);
+    this.currentId = infoId;
+    this.render(infoId, info);
+    this.el.classList.add('open');
+    this.el.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('info-open');
+    this.scroll.scrollTop = 0;
+    if (focus) setTimeout(() => this.el.querySelector('.ip-title')?.focus(), 60);
+    bus.emit('infoOpened', infoId);
+    return true;
+  }
+
+  close() {
+    if (!this.isOpen) return;
+    this.el.classList.remove('open');
+    this.el.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('info-open');
+    this.currentId = null;
+    this.history = [];
+    bus.emit('infoClosed');
+  }
+
+  render(id, info) {
+    const ui = Content.ui.infoPanel;
+    const s = this.scroll;
+    s.innerHTML = '';
+    if (info.kicker) s.append(U.el('div', { class: 'ip-kicker', html: info.kicker }));
+    s.append(U.el('h2', { class: 'ip-title', tabindex: '-1', html: info.title }));
+    const badges = U.el('div', { class: 'ip-badges' });
+    if (info.status && Content.ui.status[info.status]) badges.append(this.badge(Content.ui.status[info.status]));
+    for (const b of info.badges || []) if (Content.ui.badges[b]) badges.append(this.badge(Content.ui.badges[b]));
+    if (badges.childElementCount) s.append(badges);
+
+    const body = U.el('div', { class: 'ip-body' });
+    for (const p of [].concat(info.body || [])) body.append(U.el('p', { html: p }));
+    s.append(body);
+
+    if (info.stats?.length) {
+      const dl = U.el('dl', { class: 'kv' });
+      for (const [k, v] of info.stats) dl.append(U.el('dt', { html: k }), U.el('dd', { html: v }));
+      s.append(U.el('section', { class: 'ip-card' }, [U.el('h3', { text: ui.stats }), dl]));
+    }
+    if (info.fact) s.append(U.el('section', { class: 'ip-card ip-fact' }, [U.el('h3', { text: ui.fact }), U.el('p', { html: info.fact })]));
+    if (info.deeper?.length) {
+      const d = U.el('details', { class: 'ip-deeper' });
+      d.append(U.el('summary', { text: ui.deeper }));
+      const db = U.el('div', { class: 'deeper-body' });
+      for (const p of [].concat(info.deeper)) db.append(U.el(p.trim().startsWith('<') ? 'div' : 'p', { html: p }));
+      d.append(db);
+      s.append(d);
+    }
+    if (info.actions?.length) {
+      const a = U.el('div', { class: 'ip-actions' });
+      for (const act of info.actions) {
+        a.append(U.el('button', { class: 'btn small', type: 'button', onclick: () => this.runAction(act) }, act.label));
+      }
+      s.append(a);
+    }
+    if (info.related?.length) {
+      const rel = U.el('div', { class: 'ip-related' });
+      for (const rid of info.related) {
+        const r = Content.get(rid);
+        if (r) rel.append(U.el('button', { type: 'button', onclick: () => this.open(rid, { focus: true }), html: r.title }));
+      }
+      if (rel.childElementCount) s.append(U.el('section', {}, [U.el('h3', { class: 'g-section', text: ui.related }), rel]));
+    }
+
+    // navigation footer
+    let nav = this.el.querySelector('.ip-nav');
+    if (!nav) { nav = U.el('div', { class: 'ip-nav' }); this.el.append(nav); }
+    nav.innerHTML = '';
+    const canStage = this.app.canStepStage();
+    nav.append(U.el('button', { class: 'btn small', type: 'button', disabled: !canStage.prev, onclick: () => this.app.stepStage(-1, { openInfo: true }) }, [this.icon('M15 6l-6 6 6 6'), ui.prev]));
+    nav.append(U.el('button', { class: 'btn small', type: 'button', disabled: !canStage.next, onclick: () => this.app.stepStage(1, { openInfo: true }) }, [ui.next, this.icon('M9 6l6 6-6 6')]));
+    const scene = info.scene;
+    if (scene && Registry.scenes[scene]) {
+      nav.append(U.el('button', {
+        class: 'btn small primary', type: 'button',
+        onclick: () => { this.app.viewInfoIn3D(id); if (U.isMobile()) this.close(); },
+      }, [this.icon('M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3zM12 12l8-4.5M12 12v9M12 12L4 7.5'), ui.view3d]));
+    }
+  }
+
+  badge(b) {
+    return U.el('button', { class: 'badge ' + b.cls, type: 'button', style: { cursor: 'pointer' }, title: 'Wat betekent dit?', onclick: () => this.open(b.info, { focus: true }) }, b.label);
+  }
+
+  icon(d) {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('viewBox', '0 0 24 24'); svg.setAttribute('aria-hidden', 'true');
+    const p = document.createElementNS('http://www.w3.org/2000/svg', 'path'); p.setAttribute('d', d); svg.append(p);
+    return svg;
+  }
+
+  /** actions: { label, scene, params, focus, info, mode, mass } */
+  runAction(act) {
+    if (act.mass !== undefined) this.app.setMass(act.mass);
+    if (act.mode) this.app.setMode(act.mode);
+    if (act.scene) this.app.goToScene(act.scene, act.params || {}, { focus: act.focus });
+    if (act.info) this.open(act.info, { focus: true });
+    if (act.toggle) this.app.togglePanel(act.toggle, true);
+  }
+}
+
+// =====================================================================
+// 66-timeline.js
+// =====================================================================
+/* Timeline: bottom bar with play/pause, prev/next, speed (1 yr/s … 1 billion yr/s),
+   the age counter and one clickable chip per stage of the current evolution path. */
+
+class Timeline {
+  constructor(app) {
+    this.app = app;
+    this.chipsEl = document.getElementById('tl-chips');
+    this.playBtn = document.getElementById('tl-play');
+    this.speed = document.getElementById('tl-speed-slider');
+    this.speedOut = document.getElementById('tl-speed-value');
+    this.ageOut = document.getElementById('tl-age-value');
+    this.ageLabel = document.querySelector('.tl-age-label');
+    this.chips = [];
+    this.active = -1;
+    this.playBtn.addEventListener('click', () => app.togglePlay());
+    document.getElementById('tl-prev').addEventListener('click', () => app.stepStage(-1));
+    document.getElementById('tl-next').addEventListener('click', () => app.stepStage(1));
+    this.speed.addEventListener('input', () => app.setSpeed(Math.pow(10, Number(this.speed.value))));
+    this._lastAgeText = '';
+  }
+
+  setPath(path) {
+    this.chipsEl.innerHTML = '';
+    this.chips = [];
+    this.active = -1;
+    let lastKind = null;
+    path.stages.forEach((s, i) => {
+      if (lastKind === 'formation' && s.kind !== 'formation') this.chipsEl.append(U.el('li', { class: 'tl-chip sep', 'aria-hidden': 'true' }));
+      lastKind = s.kind;
+      const bar = U.el('span', { class: 'bar' });
+      const btn = U.el('button', {
+        type: 'button', 'aria-label': `${Content.ui.stageN(i + 1, path.stages.length)}: ${s.label}`,
+        onclick: () => this.app.goToStage(i, { openInfo: false }),
+        onkeydown: (e) => { if (e.key === 'Enter' && e.shiftKey) { e.preventDefault(); this.app.goToStage(i, { openInfo: true }); } },
+      }, [U.el('span', { class: 'n', text: String(i + 1) }), U.el('span', { class: 'l', text: s.short || s.label }), bar]);
+      btn.title = `${s.label} – ${U.fmtYears(s.duration, 2)}`;
+      const li = U.el('li', { class: 'tl-chip' + (s.kind === 'formation' ? ' formation' : '') }, btn);
+      this.chipsEl.append(li);
+      this.chips.push({ li, bar, btn });
+    });
+  }
+
+  setActive(i, f = 0) {
+    if (i !== this.active) {
+      this.chips.forEach((c, k) => {
+        c.li.classList.toggle('active', k === i);
+        c.li.classList.toggle('done', k < i);
+        c.btn.setAttribute('aria-current', k === i ? 'step' : 'false');
+        if (k !== i) c.bar.style.width = '';
+      });
+      this.active = i;
+      const c = this.chips[i];
+      if (c) c.li.scrollIntoView({ block: 'nearest', inline: 'center', behavior: Settings.reducedMotion ? 'auto' : 'smooth' });
+    }
+    const c = this.chips[i];
+    if (c) c.bar.style.width = (U.clamp(f) * 100).toFixed(1) + '%';
+  }
+
+  setPlaying(p) {
+    this.playBtn.classList.toggle('playing', p);
+    this.playBtn.setAttribute('aria-label', p ? Content.ui.pause : Content.ui.play);
+  }
+
+  setSpeed(yps) {
+    this.speed.value = String(Math.log10(yps));
+    const t = Content.ui.speedFmt(yps);
+    this.speedOut.textContent = t;
+    this.speed.setAttribute('aria-valuetext', t.replace('1 s =', '1 seconde is'));
+  }
+
+  /** Show the star's age (negative = before birth). */
+  setAge(starAge, label) {
+    let txt, lab;
+    if (label) { lab = label; txt = starAge; } else if (starAge < 0) { lab = 'Geboorte over'; txt = Content.ui.ageFmt(-starAge); } else { lab = 'Leeftijd'; txt = Content.ui.ageFmt(starAge); }
+    if (txt !== this._lastAgeText) { this.ageOut.textContent = txt; this._lastAgeText = txt; }
+    if (this.ageLabel.textContent !== lab) this.ageLabel.textContent = lab;
+  }
+}
+
+// =====================================================================
+// 90-app.js
+// =====================================================================
+/* App: the main controller. Owns the mode (levensloop, eindproducten, binnenkant,
+   vergelijken, rondleiding), the evolution path + playback, scene switching,
+   panels, keyboard shortcuts, deep links and the self-test used during development. */
+
+const App = {
+  sm: null, info: null, timeline: null,
+  hr: null, classification: null, tour: null, quiz: null, compare: null,
+  mode: 'levensloop',
+  panels: { hr: false, classificatie: false, gallery: false, quiz: false },
+  mass: 1, lowZ: false, path: null,
+  age: 0, stageIndex: 0, playing: false, speed: Math.pow(10, 8.5),
+  minStageSeconds: 9,
+  scenes: {}, lru: [], activeScene: null, activeSceneId: null, activeParams: {},
+  state: null, errors: [], _switchToken: 0, _sceneErrors: new Set(), _captionInfo: null,
+
+  // ------------------------------------------------------------------ boot
+  init() {
+    this.captureErrors();
+    Settings.load();
+    this.applyBodyClasses();
+    try {
+      this.sm = new SceneManager(document.getElementById('viewport'));
+    } catch (e) {
+      console.error(e);
+      this.fatal(Content.ui.webglError);
+      return;
+    }
+    this.sm.onUpdate = (dt) => this.update(dt);
+    this.info = new InfoPanel(this);
+    this.timeline = new Timeline(this);
+    this.timeline.setSpeed(this.speed);
+    const M = Registry.modules;
+    const make = (name, fn) => { if (!M[name]) return null; try { return fn(M[name]); } catch (e) { console.error(`[${name}]`, e); return null; } };
+    this.hr = make('HRDiagram', (C) => new C(document.getElementById('hr-body'), this));
+    this.classification = make('ClassificationPanel', (C) => new C(document.getElementById('class-body'), this));
+    this.tour = make('TourMode', (C) => new C(this, document.getElementById('tour-card')));
+    this.quiz = make('QuizMode', (C) => new C(this, document.getElementById('quiz-body')));
+    this.compare = make('CompareMode', (C) => new C(this, document.getElementById('compare-panel')));
+
+    this.bindUI();
+    this.buildMassPanel();
+    this.buildGallery();
+    document.getElementById('help-body').innerHTML = Content.help;
+
+    bus.on('pick', ({ infoId, source }) => this.openInfo(infoId, { focus: source !== '3d' }));
+    bus.on('info', (id) => this.openInfo(id, { focus: true }));
+    bus.on('settings', ({ key }) => this.onSetting(key));
+    bus.on('fps', (f) => { if (Settings.showFps) document.getElementById('fps').textContent = Math.round(f) + Content.ui.fpsSuffix; });
+
+    this.setMass(1, { silent: true });
+    const deep = this.applyDeepLink();
+    if (!deep) this.goToStage(0, { instant: true });
+    this.sm.start();
+    let frames = 0;
+    const hideLoader = () => { if (++frames < 3) return requestAnimationFrame(hideLoader); document.getElementById('loading').classList.add('done'); };
+    requestAnimationFrame(hideLoader);
+    window.App = this;
+  },
+
+  captureErrors() {
+    const push = (msg) => { this.errors.push(String(msg).slice(0, 500)); if (this.errors.length > 200) this.errors.shift(); };
+    window.addEventListener('error', (e) => push(e.message + (e.filename ? ` @${e.lineno}:${e.colno}` : '')));
+    window.addEventListener('unhandledrejection', (e) => push('unhandled rejection: ' + (e.reason?.stack || e.reason)));
+    const ce = console.error.bind(console);
+    console.error = (...a) => { push(a.map((x) => (x?.stack || x?.message || String(x))).join(' ')); ce(...a); };
+  },
+
+  fatal(html) {
+    document.getElementById('loading').classList.add('done');
+    document.body.append(U.el('div', { class: 'fatal', html }));
+  },
+
+  applyBodyClasses() {
+    const b = document.body.classList;
+    b.toggle('reduced-motion', Settings.reducedMotion);
+    b.toggle('no-labels', !Settings.labels);
+    document.getElementById('fps').hidden = !Settings.showFps;
+    b.forEach((c) => { if (c.startsWith('mode-')) b.remove(c); });
+    b.add('mode-' + this.mode);
+  },
+
+  onSetting(key) {
+    this.applyBodyClasses();
+    if (key === 'quality') {
+      // rebuild every scene with the new particle budget
+      const id = this.activeSceneId, params = this.activeParams;
+      for (const s of Object.values(this.scenes)) { if (s !== this.activeScene) { try { s.dispose(); } catch (e) { /* ignore */ } } }
+      this.scenes = { [id]: this.activeScene }; this.lru = [id];
+      if (this.activeScene) { this.activateScene(id, params, { instant: true, rebuild: true }); }
+      this.toast(Content.ui.qualityChanged(Settings.quality));
+    }
+    if (key === 'reducedMotion' && Settings.reducedMotion) this.toast(Content.ui.reducedOn);
+  },
+
+  // ------------------------------------------------------------------ UI wiring
+  bindUI() {
+    document.querySelectorAll('#modes .mode-btn').forEach((b) => b.addEventListener('click', () => {
+      if (b.dataset.mode) this.setMode(b.dataset.mode);
+      else this.togglePanel(b.dataset.toggle);
+      if (U.isMobile()) this.toggleMenu(false);
+    }));
+    document.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', () => this.togglePanel(b.dataset.close, false)));
+    document.querySelectorAll('[data-expand]').forEach((b) => b.addEventListener('click', () => {
+      const p = document.getElementById(b.dataset.expand); p.classList.toggle('expanded'); setTimeout(() => this.hr?.resize?.(), 350);
+    }));
+    document.getElementById('btn-menu').addEventListener('click', () => this.toggleMenu());
+    document.getElementById('btn-objects').addEventListener('click', () => this.toggleObjects());
+    document.getElementById('btn-help').addEventListener('click', () => document.getElementById('help-dialog').showModal());
+    document.getElementById('btn-settings').addEventListener('click', () => this.openSettings());
+    document.getElementById('cap-more').addEventListener('click', () => { if (this._captionInfo) this.openInfo(this._captionInfo, { focus: true }); });
+    document.getElementById('quiz-dialog').addEventListener('close', () => { this.panels.quiz = false; this.syncNav(); });
+
+    // settings dialog
+    const dlg = document.getElementById('settings-dialog');
+    dlg.querySelectorAll('input[name=quality]').forEach((r) => r.addEventListener('change', () => Settings.set('quality', r.value)));
+    const bindCheck = (id, key) => { const c = document.getElementById(id); c.addEventListener('change', () => Settings.set(key, c.checked)); };
+    bindCheck('set-reduced', 'reducedMotion'); bindCheck('set-labels', 'labels'); bindCheck('set-autorotate', 'autoRotate'); bindCheck('set-fps', 'showFps');
+
+    window.addEventListener('keydown', (e) => this.onKey(e));
+  },
+
+  openSettings() {
+    const dlg = document.getElementById('settings-dialog');
+    dlg.querySelectorAll('input[name=quality]').forEach((r) => { r.checked = r.value === Settings.quality; });
+    document.getElementById('set-reduced').checked = Settings.reducedMotion;
+    document.getElementById('set-labels').checked = Settings.labels;
+    document.getElementById('set-autorotate').checked = Settings.autoRotate;
+    document.getElementById('set-fps').checked = Settings.showFps;
+    dlg.showModal();
+  },
+
+  toggleMenu(force) {
+    const nav = document.getElementById('modes'), btn = document.getElementById('btn-menu');
+    const open = force ?? !nav.classList.contains('open');
+    nav.classList.toggle('open', open); btn.setAttribute('aria-expanded', String(open));
+  },
+
+  toggleObjects(force) {
+    const panel = document.getElementById('objects-panel'), btn = document.getElementById('btn-objects');
+    const open = force ?? panel.hidden;
+    panel.hidden = !open; btn.setAttribute('aria-expanded', String(open));
+    if (!open) return;
+    const list = document.getElementById('objects-list');
+    list.innerHTML = '';
+    const seen = new Set();
+    const ids = [];
+    const meta = Registry.scenes[this.activeSceneId]?.meta;
+    const main = this._captionInfo || meta?.infoId;
+    if (main && Content.get(main)) { ids.push(main); seen.add(main); }
+    for (const p of this.activeScene?.pickables || []) if (p.enabled !== false && !seen.has(p.infoId)) { seen.add(p.infoId); ids.push(p.infoId); }
+    for (const l of this.activeScene?.labelDefs || []) if (!seen.has(l.infoId)) { seen.add(l.infoId); ids.push(l.infoId); }
+    if (!ids.length) list.append(U.el('li', { class: 'muted', text: Content.ui.objectsEmpty }));
+    for (const id of ids) {
+      const inf = Content.get(id);
+      if (!inf) continue;
+      const b = U.el('button', { type: 'button', onclick: () => { this.openInfo(id, { focus: true }); this.toggleObjects(false); } }, [inf.title, inf.tooltip ? U.el('span', { class: 'ol-sub', text: inf.tooltip }) : null]);
+      b.addEventListener('pointerenter', () => this.sm.setHoverByInfo(id, true));
+      b.addEventListener('pointerleave', () => this.sm.setHoverByInfo(id, false));
+      b.addEventListener('focus', () => this.sm.setHoverByInfo(id, true));
+      b.addEventListener('blur', () => this.sm.setHoverByInfo(id, false));
+      list.append(U.el('li', {}, b));
+    }
+    list.querySelector('button')?.focus();
+  },
+
+  onKey(e) {
+    const tag = (e.target.tagName || '').toLowerCase();
+    const typing = tag === 'input' && !['checkbox', 'radio', 'range'].includes(e.target.type) || tag === 'textarea' || tag === 'select';
+    if (typing || e.ctrlKey || e.metaKey || e.altKey) return;
+    const inDialog = !!e.target.closest?.('dialog');
+    if (e.key === 'Escape') {
+      if (!document.getElementById('objects-panel').hidden) return this.toggleObjects(false);
+      if (this.info.isOpen) return this.info.close();
+      if (this.panels.classificatie) return this.togglePanel('classificatie', false);
+      if (this.panels.gallery) return this.togglePanel('gallery', false);
+      if (this.panels.hr) return this.togglePanel('hr', false);
+      if (document.getElementById('modes').classList.contains('open')) return this.toggleMenu(false);
+      return;
+    }
+    if (inDialog) return;
+    const onControl = ['button', 'a', 'summary'].includes(tag) || tag === 'input';
+    if (this.mode === 'rondleiding' && this.tour && !onControl) {
+      if (e.key === 'ArrowLeft') { e.preventDefault(); return this.tour.prev?.(); }
+      if (e.key === 'ArrowRight') { e.preventDefault(); return this.tour.next?.(); }
+      if (e.key === ' ') { e.preventDefault(); return this.tour.togglePause?.(); }
+    }
+    switch (e.key) {
+      case ' ':
+        if (onControl) return;
+        e.preventDefault(); this.togglePlay(); break;
+      case 'ArrowLeft': case 'ArrowRight':
+        if (tag === 'input') return;
+        e.preventDefault(); this.stepStage(e.key === 'ArrowLeft' ? -1 : 1); break;
+      case '1': this.setMode('levensloop'); break;
+      case '2': this.setMode('eindproducten'); break;
+      case '3': this.setMode('binnenkant'); break;
+      case '4': case 'h': case 'H': this.togglePanel('hr'); break;
+      case '5': this.togglePanel('classificatie'); break;
+      case '6': this.setMode('vergelijken'); break;
+      case '7': this.setMode('rondleiding'); break;
+      case '8': this.togglePanel('quiz', true); break;
+      case 'o': case 'O': this.toggleObjects(); break;
+      case 'i': case 'I': if (this._captionInfo) this.openInfo(this._captionInfo, { focus: true }); break;
+      case 'r': case 'R': if (this.activeScene) this.sm.flyTo(this.activeScene.getCameraPreset(), 1.4); break;
+      case '?': document.getElementById('help-dialog').showModal(); break;
+      default: return;
+    }
+  },
+
+  buildMassPanel() {
+    const slider = document.getElementById('mass-slider');
+    slider.addEventListener('input', () => this.setMass(this.sliderToMass(Number(slider.value))));
+    document.getElementById('lowz').addEventListener('change', (e) => { this.lowZ = e.target.checked; this.setMass(this.mass); });
+    document.getElementById('mass-collapse').addEventListener('click', () => {
+      const p = document.getElementById('mass-panel'); const c = p.classList.toggle('collapsed');
+      document.getElementById('mass-collapse').setAttribute('aria-expanded', String(!c));
+    });
+    if (U.isMobile()) { document.getElementById('mass-panel').classList.add('collapsed'); document.getElementById('mass-collapse').setAttribute('aria-expanded', 'false'); }
+    const pre = document.getElementById('mass-presets');
+    for (const p of Content.ui.massPresets) pre.append(U.el('button', { type: 'button', 'aria-pressed': 'false', dataset: { m: p.m }, onclick: () => this.setMass(p.m) }, p.label));
+    document.getElementById('mass-note').textContent = Content.ui.massNote;
+  },
+  sliderToMass(v) { return Math.pow(10, -2 + (v / 1000) * (Math.log10(150) + 2)); },
+  massToSlider(m) { return Math.round(((Math.log10(m) + 2) / (Math.log10(150) + 2)) * 1000); },
+
+  buildGallery() {
+    const body = document.getElementById('gallery-body');
+    body.innerHTML = '';
+    body.append(U.el('p', { class: 'muted', text: Content.ui.galleryIntro, style: { marginTop: 0 } }));
+    // meta.gallery may be one card or an array of cards: { order, section, title, blurb, art, params, status }
+    const items = [];
+    for (const [id, s] of Object.entries(Registry.scenes)) for (const g of [].concat(s.meta.gallery || [])) items.push({ id, s, g });
+    items.sort((a, b) => (a.g.order ?? 99) - (b.g.order ?? 99));
+    const sections = {};
+    for (const it of items) (sections[it.g.section || 'eindproduct'] ||= []).push(it);
+    for (const [sec, list] of Object.entries(sections)) {
+      body.append(U.el('h3', { class: 'g-section', text: Content.ui.gallerySections[sec] || sec }));
+      const grid = U.el('div', { class: 'gallery-grid' });
+      for (const { id, s, g } of list) {
+        const status = g.status || s.meta.status;
+        const st = status && Content.ui.status[status];
+        grid.append(U.el('button', { class: 'g-card', type: 'button', onclick: () => { this.togglePanel('gallery', false); this.goToScene(id, Object.assign({ mass: this.mass }, g.params || {})); } }, [
+          U.el('div', { class: 'g-art', 'aria-hidden': 'true', style: { background: g.art || 'radial-gradient(circle at 50% 60%, #ffd28a 0 8%, #ff7a3a33 30%, transparent 60%), #0b0d1a' } }),
+          U.el('div', { class: 'g-txt' }, [U.el('h3', { text: g.title || s.meta.title }), U.el('p', { text: g.blurb || '' }), st ? U.el('span', { class: 'badge ' + st.cls, text: st.label }) : null]),
+        ]));
+      }
+      body.append(grid);
+    }
+    this.galleryItems = items;
+    this.galleryOrder = [...new Set(items.map((it) => it.id))];
+  },
+
+  // ------------------------------------------------------------------ modes & panels
+  setMode(mode, opts = {}) {
+    if (mode === this.mode && !opts.force) {
+      if (mode === 'eindproducten') this.togglePanel('gallery', true);
+      if (mode === 'levensloop') this.goToStage(this.stageIndex);
+      return;
+    }
+    const prev = this.mode;
+    if (prev === 'vergelijken') { try { this.compare?.exit(); } catch (e) { console.error(e); } this.hr?.clearCompare?.(); }
+    if (prev === 'rondleiding' && mode !== 'rondleiding') { try { this.tour?.stop({ silent: true }); } catch (e) { console.error(e); } }
+    this.mode = mode;
+    this.applyBodyClasses();
+    this.syncNav();
+    this.togglePanel('gallery', false);
+    switch (mode) {
+      case 'levensloop': if (!opts.skipStage) this.goToStage(this.stageIndex); break;
+      case 'eindproducten': this.pause(); if (!opts.noGallery) this.togglePanel('gallery', true); break;
+      case 'binnenkant': this.pause(); if (!opts.noScene) this.goToScene('interior', { variant: this.interiorVariant(this.mass), mass: this.mass }); break;
+      case 'vergelijken':
+        this.pause();
+        if (this.compare) this.compare.enter(); else this.toast('Vergelijkingsmodus is niet beschikbaar.');
+        break;
+      case 'rondleiding':
+        if (this.tour) this.tour.start(); else this.toast('De rondleiding is niet beschikbaar.');
+        break;
+    }
+    bus.emit('mode', mode);
+  },
+
+  syncNav() {
+    document.querySelectorAll('#modes .mode-btn').forEach((b) => {
+      const on = b.dataset.mode ? b.dataset.mode === this.mode : !!this.panels[b.dataset.toggle];
+      b.setAttribute('aria-pressed', String(on));
+    });
+  },
+
+  togglePanel(name, force) {
+    const open = force ?? !this.panels[name];
+    if (name === 'quiz') {
+      const d = document.getElementById('quiz-dialog');
+      if (open) { if (!this.quiz) { this.toast('De quiz is niet beschikbaar.'); return; } this.pause(); this.quiz.open?.(); if (!d.open) d.showModal(); } else if (d.open) d.close();
+      this.panels.quiz = open; this.syncNav(); return;
+    }
+    const el = { hr: 'hr-panel', classificatie: 'class-panel', gallery: 'gallery-panel' }[name];
+    if (!el) return;
+    this.panels[name] = open;
+    document.getElementById(el).hidden = !open;
+    if (open && name === 'classificatie') this.togglePanel('gallery', false);
+    if (open && name === 'gallery') this.panels.classificatie && this.togglePanel('classificatie', false);
+    if (name === 'hr') { if (open) { this.hr?.onShow?.(); requestAnimationFrame(() => this.hr?.resize?.()); } else this.hr?.onHide?.(); }
+    if (name === 'classificatie') { if (open) this.classification?.onShow?.(); else this.classification?.onHide?.(); }
+    if (open) document.getElementById(el).querySelector('button, [tabindex]')?.focus({ preventScroll: true });
+    this.syncNav();
+  },
+
+  interiorVariant(m) { return m < 0.35 ? 'rodeDwerg' : m < 1.5 ? 'zon' : m < 8 ? 'heet' : 'uienschil'; },
+
+  // ------------------------------------------------------------------ mass & path
+  setMass(m, opts = {}) {
+    m = U.clamp(m, Evolution.MIN_MASS ?? 0.01, Evolution.MAX_MASS ?? 150);
+    this.mass = m;
+    document.getElementById('mass-slider').value = this.massToSlider(m);
+    document.getElementById('mass-value').textContent = U.fmtMass(m);
+    document.querySelectorAll('#mass-presets button').forEach((b) => b.setAttribute('aria-pressed', String(Math.abs(Number(b.dataset.m) - m) / m < 0.02)));
+    const oldStage = this.path?.stages[this.stageIndex];
+    const oldF = this.state?.f ?? 0;
+    this.path = Evolution.getPath(m, { lowZ: this.lowZ });
+    this.timeline.setPath(this.path);
+    this.hr?.setPath?.(this.path);
+    this.renderFate();
+    if (opts.silent) return;
+    // keep the same stage (by id) when it still exists for the new mass
+    let idx = oldStage ? this.path.stages.findIndex((s) => s.id === oldStage.id) : 0;
+    if (idx < 0) idx = Math.min(this.stageIndex, this.path.stages.length - 1);
+    if (this.mode === 'levensloop') {
+      const s = this.path.stages[idx];
+      const needSwitch = s.sceneId !== this.activeSceneId || (s.params?.variant ?? null) !== (this.activeParams?.variant ?? null);
+      this.stageIndex = idx;
+      this.age = s.start + U.clamp(oldF) * s.duration;
+      if (needSwitch) this.goToStage(idx, { f: oldF });
+      else { this.activeParams = Object.assign({}, s.params, { mass: m, stage: s, path: this.path, lowZ: this.lowZ }); this.activeScene.params = this.activeParams; this.activeScene.onParams?.(this.activeParams); this.updateCaptionForStage(); }
+    } else if (this.mode === 'binnenkant' && this.activeSceneId === 'interior') {
+      this.goToScene('interior', { variant: this.interiorVariant(m), mass: m });
+    }
+    bus.emit('mass', m);
+  },
+
+  renderFate() {
+    const p = this.path, box = document.getElementById('mass-fate');
+    const txt = Content.paths?.[p.category];
+    const label = txt?.label || p.categoryLabel || p.category;
+    const route = txt?.route || p.fate || p.stages.filter((s) => s.kind !== 'formation').map((s) => s.label).join(' → ');
+    box.innerHTML = '';
+    box.append(U.el('span', { class: 'fate-cat', html: label }), U.el('span', { class: 'fate-path', html: route }));
+    if (p.msLifetime) box.append(U.el('span', { class: 'fate-path', html: `Hoofdreeks: ${U.fmtYears(p.msLifetime, 2)}` }));
+    if (txt?.info && Content.get(txt.info)) box.append(U.el('button', { class: 'link-btn', type: 'button', onclick: () => this.openInfo(txt.info, { focus: true }) }, 'Meer over dit pad'));
+  },
+
+  // ------------------------------------------------------------------ timeline playback
+  isTimelineMode() { return this.mode === 'levensloop' || (this.mode === 'rondleiding' && this.tour?.usesTimeline !== false); },
+
+  goToStage(i, opts = {}) {
+    const st = this.path.stages;
+    i = U.clamp(i, 0, st.length - 1);
+    if (this.mode !== 'levensloop' && this.mode !== 'rondleiding') this.setMode('levensloop', { skipStage: true });
+    const s = st[i];
+    this.stageIndex = i;
+    this.age = s.start + U.clamp(opts.f || 0) * s.duration;
+    this.state = Evolution.stateAt(this.path, this.age);
+    const params = Object.assign({}, s.params, { mass: this.mass, stage: s, path: this.path, lowZ: this.lowZ });
+    this.goToScene(s.sceneId, params, { instant: opts.instant, fromStage: true, focus: opts.focus });
+    this.timeline.setActive(i, opts.f || 0);
+    if (opts.openInfo) this.openInfo(s.infoId);
+    bus.emit('stage', { index: i, stage: s });
+  },
+
+  canStepStage() {
+    if (this.isTimelineMode()) return { prev: this.stageIndex > 0, next: this.stageIndex < this.path.stages.length - 1 };
+    if (this.mode === 'eindproducten' && this.galleryOrder) { const k = this.galleryOrder.indexOf(this.activeSceneId); return { prev: k > 0, next: k >= 0 && k < this.galleryOrder.length - 1 }; }
+    return { prev: this.stageIndex > 0, next: this.stageIndex < this.path.stages.length - 1 };
+  },
+
+  stepStage(d, opts = {}) {
+    if (this.mode === 'eindproducten' && this.galleryOrder) {
+      const k = this.galleryOrder.indexOf(this.activeSceneId) + d;
+      if (k >= 0 && k < this.galleryOrder.length) {
+        const id = this.galleryOrder[k];
+        this.goToScene(id, Object.assign({ mass: this.mass }, Registry.scenes[id].meta.gallery?.params || {}));
+        if (opts.openInfo) this.openInfo(Registry.scenes[id].meta.infoId);
+      }
+      return;
+    }
+    const i = this.stageIndex + d;
+    if (i < 0 || i >= this.path.stages.length) return;
+    this.goToStage(i, { openInfo: opts.openInfo || this.info.isOpen });
+  },
+
+  play() {
+    if (!this.isTimelineMode() && this.mode !== 'vergelijken') this.setMode('levensloop');
+    if (this.isTimelineMode() && this.stageIndex === this.path.stages.length - 1 && this.state && this.state.f >= 0.999) this.goToStage(0);
+    this.playing = true; this.timeline.setPlaying(true); bus.emit('play', true);
+  },
+  pause() { this.playing = false; this.timeline?.setPlaying(false); bus.emit('play', false); },
+  togglePlay() { this.playing ? this.pause() : this.play(); },
+  setSpeed(yps) { this.speed = U.clamp(yps, 1, 1e9); this.timeline.setSpeed(this.speed); },
+
+  advance(dt) {
+    const st = this.path.stages, s = st[this.stageIndex];
+    const minS = s.minSeconds || this.minStageSeconds;
+    const rate = Math.min(this.speed, s.duration / minS);
+    this.effectiveRate = rate;
+    this.age += rate * dt;
+    if (this.age >= s.start + s.duration) {
+      if (this.stageIndex < st.length - 1) this.goToStage(this.stageIndex + 1, { fromPlayback: true, openInfo: this.info.isOpen && this.info.currentId === s.infoId });
+      else { this.age = s.start + s.duration; this.pause(); }
+    }
+  },
+
+  // ------------------------------------------------------------------ per-frame
+  update(dt) {
+    let state = null;
+    if (this.mode === 'vergelijken' && this.compare) {
+      const r = this.compare.update(dt, { playing: this.playing, speed: this.speed });
+      if (r) {
+        state = { compare: true, a: r.stateA, b: r.stateB, age: r.age };
+        this.timeline.setAge(r.age, null);
+        this.hr?.setCompare?.(r.stateA, r.stateB);
+      }
+    } else if (this.isTimelineMode() && this.path) {
+      if (this.playing) this.advance(dt);
+      state = this.state = Evolution.stateAt(this.path, this.age);
+      this.timeline.setActive(this.stageIndex, state.f);
+      this.timeline.setAge(state.starAge ?? (this.age - (this.path.birth || 0)));
+      this.hr?.setState?.(state);
+      const out = document.getElementById('tl-speed-value');
+      if (this.playing && this.effectiveRate && this.effectiveRate < this.speed * 0.98) out.textContent = Content.ui.speedFmt(this.effectiveRate) + ' · fase vertraagd';
+      else if (out.textContent.includes('vertraagd') || !this.playing) out.textContent = Content.ui.speedFmt(this.speed);
+    }
+    if (this.mode === 'rondleiding') { try { this.tour?.update?.(dt); } catch (e) { console.error(e); } }
+    const sc = this.activeScene;
+    if (sc) {
+      sc.time += dt;
+      try { sc.update(dt, state); } catch (e) {
+        if (!this._sceneErrors.has(this.activeSceneId)) { this._sceneErrors.add(this.activeSceneId); console.error(`[scene ${this.activeSceneId}] update`, e); }
+      }
+    }
+  },
+
+  // ------------------------------------------------------------------ scenes
+  getScene(id) {
+    if (this.scenes[id]) return this.scenes[id];
+    const reg = Registry.scenes[id];
+    if (!reg) return null;
+    const s = new reg.cls({ sm: this.sm, app: this });
+    s.id = id;
+    this.scenes[id] = s;
+    return s;
+  },
+
+  touchLru(id) {
+    this.lru = this.lru.filter((x) => x !== id); this.lru.push(id);
+    while (this.lru.length > 4) {
+      const old = this.lru.shift();
+      if (old === this.activeSceneId) { this.lru.push(old); break; }
+      try { this.scenes[old]?.dispose(); } catch (e) { console.warn(e); }
+      delete this.scenes[old];
+    }
+  },
+
+  /** Switch to a scene. params go to scene.enter(); opts: { instant, focus, fromStage } */
+  async goToScene(id, params = {}, opts = {}) {
+    if (!Registry.scenes[id]) { console.warn('[app] onbekende scène', id); return false; }
+    const same = id === this.activeSceneId && this.activeScene;
+    if (same && (params.variant ?? null) === (this.activeParams.variant ?? null) && !opts.force) {
+      this.activeParams = params; this.activeScene.params = params;
+      this.activeScene.onParams?.(params);
+      this.updateCaption(id, opts);
+      if (opts.focus) this.focusCamera(opts.focus);
+      return true;
+    }
+    const token = ++this._switchToken;
+    const quick = opts.instant || Settings.reducedMotion || !this.activeScene;
+    const fade = document.getElementById('fade');
+    if (!quick) { fade.classList.add('on'); await new Promise((r) => setTimeout(r, 380)); }
+    if (token !== this._switchToken) return false;
+    this.activateScene(id, params, opts);
+    if (!quick) requestAnimationFrame(() => fade.classList.remove('on'));
+    else fade.classList.remove('on');
+    return true;
+  },
+
+  activateScene(id, params, opts = {}) {
+    const old = this.activeScene;
+    if (old) {
+      try { old.exit(); } catch (e) { console.error(`[scene ${this.activeSceneId}] exit`, e); }
+      old._active = false;
+      this.sm.stage.remove(old.group);
+      for (const d of old.labelDefs) d.handle = null;
+      if (opts.rebuild) { try { old.dispose(); } catch (e) { /* ignore */ } delete this.scenes[this.activeSceneId]; }
+    }
+    this.sm.labels.clear();
+    document.querySelectorAll('#labels .scene-hud').forEach((el) => el.remove());
+    this.sm.setPickables([]);
+    const s = this.getScene(id);
+    this.activeScene = s; this.activeSceneId = id; this.activeParams = params;
+    try {
+      if (!s.built) { s.build(); s.built = true; }
+      s.params = params; s.time = 0; s._active = true;
+      this.sm.stage.add(s.group);
+      s.enter(params);
+    } catch (e) {
+      console.error(`[scene ${id}] build/enter`, e);
+      this.toast('Deze scène kon niet worden geladen.');
+    }
+    this.sm.setPickables(s.pickables);
+    for (const d of s.labelDefs) d.handle = this.sm.labels.add(d);
+    this.sm.setRenderSettings(s.renderSettings || {});
+    const preset = (opts.focus && s.getFocus(opts.focus)) || s.getCameraPreset();
+    if (opts.instant || Settings.reducedMotion) this.sm.flyTo(preset, 0, true);
+    else {
+      const p = new THREE.Vector3(...(preset.position instanceof THREE.Vector3 ? preset.position.toArray() : preset.position));
+      const t = new THREE.Vector3(...(preset.target instanceof THREE.Vector3 ? preset.target.toArray() : (preset.target || [0, 0, 0])));
+      this.sm.flyTo({ position: p.clone().sub(t).multiplyScalar(1.6).add(t), target: t, minDistance: preset.minDistance, maxDistance: preset.maxDistance, fov: preset.fov }, 0, true);
+      this.sm.flyTo(preset, 2.2);
+    }
+    this.touchLru(id);
+    this.updateCaption(id, opts);
+    if (!document.getElementById('objects-panel').hidden) this.toggleObjects(true);
+    bus.emit('scene', { id, params });
+  },
+
+  focusCamera(name) {
+    const p = this.activeScene?.getFocus(name);
+    if (p) this.sm.flyTo(p, 1.8);
+  },
+
+  // ------------------------------------------------------------------ caption & info
+  updateCaption(id, opts = {}) {
+    const meta = Registry.scenes[id]?.meta || {};
+    const inTimeline = this.isTimelineMode() && this.path?.stages[this.stageIndex]?.sceneId === id;
+    if (inTimeline) return this.updateCaptionForStage();
+    this.setCaption({ kicker: meta.kicker || '', title: meta.title, infoId: meta.infoId, badges: meta.badges, status: meta.status });
+  },
+
+  updateCaptionForStage() {
+    const s = this.path.stages[this.stageIndex];
+    const meta = Registry.scenes[s.sceneId]?.meta || {};
+    const nForm = this.path.stages.filter((x) => x.kind === 'formation').length;
+    const kicker = s.kind === 'formation' ? `Stervorming · fase ${this.stageIndex + 1} van ${nForm}` : `${Content.paths?.[this.path.category]?.label || this.path.categoryLabel || 'Evolutie'} · fase ${this.stageIndex + 1} van ${this.path.stages.length}`;
+    const info = Content.get(s.infoId);
+    this.setCaption({ kicker, title: s.label, infoId: s.infoId, sub: info?.tooltip, badges: meta.badges, status: info?.status || meta.status });
+  },
+
+  setCaption({ kicker = '', title = '', sub = null, infoId = null, badges = [], status = null }) {
+    const cap = document.getElementById('caption');
+    const info = infoId ? Content.get(infoId) : null;
+    this._captionInfo = info ? infoId : null;
+    const apply = () => {
+      document.getElementById('cap-kicker').textContent = kicker;
+      document.getElementById('cap-title').innerHTML = title || info?.title || '';
+      document.getElementById('cap-sub').innerHTML = sub ?? info?.tooltip ?? '';
+      const bEl = document.getElementById('cap-badges');
+      bEl.innerHTML = '';
+      const add = (b) => b && bEl.append(U.el('button', { class: 'badge ' + b.cls, type: 'button', title: 'Wat betekent dit?', onclick: () => this.openInfo(b.info, { focus: true }) }, b.label));
+      if (status) add(Content.ui.status[status]);
+      for (const b of badges || []) add(Content.ui.badges[b]);
+      document.getElementById('cap-more').hidden = !info;
+      cap.classList.remove('changing');
+    };
+    if (Settings.reducedMotion) apply();
+    else { cap.classList.add('changing'); clearTimeout(this._capT); this._capT = setTimeout(apply, 220); }
+  },
+
+  openInfo(id, opts = {}) { return this.info.open(id, opts); },
+
+  /** "Bekijk in 3D": go to the scene of an info entry, via the timeline when that scene is part of the current path. */
+  viewInfoIn3D(id) {
+    const info = Content.get(id);
+    if (!info?.scene) return;
+    const reg = Registry.scenes[info.scene];
+    if (!reg) return;
+    if (this.activeSceneId === info.scene) { if (info.focus) this.focusCamera(info.focus); else this.sm.flyTo(this.activeScene.getCameraPreset(), 1.6); return; }
+    const idx = this.path.stages.findIndex((s) => s.sceneId === info.scene && (!info.params?.variant || s.params?.variant === info.params.variant));
+    if (idx >= 0 && reg.meta.group !== 'eindproduct' && reg.meta.group !== 'doorsnede') { this.goToStage(idx, { focus: info.focus }); return; }
+    if (reg.meta.group === 'doorsnede') this.setMode('binnenkant', { noScene: true });
+    else if (reg.meta.group === 'eindproduct') this.setMode('eindproducten', { noGallery: true });
+    else if (this.mode === 'levensloop') this.setMode('eindproducten', { noGallery: true });
+    this.goToScene(info.scene, Object.assign({ mass: this.mass }, info.params || {}), { focus: info.focus });
+  },
+
+  toast(msg, ms = 3200) {
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.hidden = false;
+    clearTimeout(this._toastT);
+    this._toastT = setTimeout(() => { t.hidden = true; }, ms);
+  },
+
+  // ------------------------------------------------------------------ deep links & testing
+  /** #scene=blackHole&variant=x&mass=20&lowz=1&stage=3|redGiant&mode=binnenkant&info=id&hr=1&class=1&gallery=1&quiz=1&play=1&speed=9&tour=1 */
+  applyDeepLink() {
+    const h = new URLSearchParams(location.hash.slice(1));
+    if (![...h.keys()].length) return false;
+    if (h.has('lowz')) { this.lowZ = h.get('lowz') === '1'; document.getElementById('lowz').checked = this.lowZ; }
+    if (h.has('mass')) this.setMass(Number(h.get('mass')) || 1, { silent: true });
+    if (h.has('speed')) this.setSpeed(Math.pow(10, Number(h.get('speed'))));
+    let handled = false;
+    if (h.has('stage')) {
+      const v = h.get('stage');
+      const i = isNaN(Number(v)) ? this.path.stages.findIndex((s) => s.id === v) : Number(v);
+      this.goToStage(Math.max(0, i), { instant: true, f: Number(h.get('f') || 0) }); handled = true;
+    }
+    if (h.has('mode')) { this.setMode(h.get('mode'), { noScene: h.has('scene') }); handled = true; }
+    if (h.has('scene')) {
+      const params = { mass: this.mass };
+      if (h.has('variant')) params.variant = h.get('variant');
+      const reg = Registry.scenes[h.get('scene')];
+      if (reg && !h.has('mode')) { this.mode = reg.meta.group === 'doorsnede' ? 'binnenkant' : reg.meta.group === 'eindproduct' ? 'eindproducten' : 'eindproducten'; this.applyBodyClasses(); this.syncNav(); }
+      this.goToScene(h.get('scene'), params, { instant: true, focus: h.get('focus') || undefined }); handled = true;
+    }
+    if (h.get('hr') === '1') this.togglePanel('hr', true);
+    if (h.get('class') === '1') this.togglePanel('classificatie', true);
+    if (h.get('gallery') === '1') this.togglePanel('gallery', true);
+    if (h.get('quiz') === '1') this.togglePanel('quiz', true);
+    if (h.has('info')) this.openInfo(h.get('info'));
+    if (h.get('play') === '1') this.play();
+    if (h.get('tour') === '1') { this.setMode('rondleiding'); handled = true; }
+    return handled;
+  },
+
+  debugInfo() {
+    return {
+      mode: this.mode, scene: this.activeSceneId, stage: this.path?.stages[this.stageIndex]?.id, mass: this.mass,
+      fps: Math.round(this.sm?.fps || 0), pickables: this.activeScene?.pickables.length, labels: this.activeScene?.labelDefs.length,
+      errors: this.errors.slice(-20), scenes: Object.keys(Registry.scenes), modules: Object.keys(Registry.modules),
+      info: Object.keys(Content.info).length, calls: this.sm?.renderer.info.render.calls, triangles: this.sm?.renderer.info.render.triangles,
+      points: this.sm?.renderer.info.render.points, textures: this.sm?.renderer.info.memory.textures, geometries: this.sm?.renderer.info.memory.geometries,
+    };
+  },
+
+  /** Visit every registered scene (and every path) and report errors + missing content. */
+  async selfTest({ dwell = 700, only = null } = {}) {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const report = { scenes: [], missingInfo: [], missingScenes: [], brokenRelated: [], brokenSceneRefs: [], errorsBefore: this.errors.length };
+    const ids = only ? [].concat(only) : Object.keys(Registry.scenes);
+    for (const id of ids) {
+      const before = this.errors.length;
+      this._sceneErrors.delete(id);
+      const variants = Registry.scenes[id].meta.variants || [undefined];
+      for (const v of variants) {
+        await this.goToScene(id, { mass: this.mass, variant: v }, { instant: true, force: true });
+        await wait(dwell);
+        // also exercise update with a timeline-like state
+        try {
+          const path = Evolution.getPath(this.mass, {});
+          const st = path.stages.find((s) => s.sceneId === id) || path.stages[path.stages.length - 1];
+          for (const f of [0, 0.5, 0.99]) this.activeScene.update(0.016, Evolution.stateAt(path, st.start + f * st.duration));
+        } catch (e) { this.errors.push(`[selftest ${id}] update with state: ${e.message}`); }
+      }
+      const sc = this.activeScene;
+      const infoIds = new Set([Registry.scenes[id].meta.infoId, ...(sc?.pickables || []).map((p) => p.infoId), ...(sc?.labelDefs || []).map((l) => l.infoId)]);
+      report.scenes.push({
+        id, ok: this.errors.length === before, pickables: sc?.pickables.length || 0, labels: sc?.labelDefs.length || 0,
+        missingInfo: [...infoIds].filter((i) => i && !Content.get(i)), errors: this.errors.slice(before),
+        calls: this.sm.renderer.info.render.calls, points: this.sm.renderer.info.render.points,
+      });
+    }
+    const masses = [0.012, 0.03, 0.07, 0.09, 0.2, 0.45, 0.6, 1, 1.8, 2.5, 5, 7.5, 9, 15, 24, 30, 60, 100, 140, 150];
+    const mi = new Set(), ms = new Set();
+    for (const m of masses) for (const lowZ of [false, true]) {
+      const p = Evolution.getPath(m, { lowZ });
+      for (const s of p.stages) { if (!Registry.scenes[s.sceneId]) ms.add(s.sceneId); if (!Content.get(s.infoId)) mi.add(s.infoId); }
+      if (Content.paths && !Content.paths[p.category]) mi.add('paths.' + p.category);
+    }
+    for (const [id, e] of Object.entries(Content.info)) {
+      for (const r of e.related || []) if (!Content.get(r)) report.brokenRelated.push(`${id} -> ${r}`);
+      if (e.scene && !Registry.scenes[e.scene]) report.brokenSceneRefs.push(`${id} -> ${e.scene}`);
+      for (const a of e.actions || []) if (a.scene && !Registry.scenes[a.scene]) report.brokenSceneRefs.push(`${id} action -> ${a.scene}`);
+    }
+    report.missingInfo = [...mi]; report.missingScenes = [...ms];
+    report.totalErrors = this.errors.length - report.errorsBefore;
+    return report;
+  },
+};
+
+// ---------------------------------------------------------------- start
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => App.init());
+else App.init();
+
+</script>
+</body>
+</html>

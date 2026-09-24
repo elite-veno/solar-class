@@ -1,0 +1,10 @@
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutlinePass } from 'three/addons/postprocessing/OutlinePass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { Lensflare, LensflareElement } from 'three/addons/objects/Lensflare.js';
+import * as BufferGeometryUtils from 'three/addons/utils/BufferGeometryUtils.js';
