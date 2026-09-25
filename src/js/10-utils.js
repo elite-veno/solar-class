@@ -116,7 +116,7 @@ const U = {
   },
   fmtTemp(K) { return (K >= 1e6 ? this.fmtBig(K, 3) : this.fmt(Math.round(K / 10) * 10, 0)) + ' K'; },
   fmtMass(m) { return this.fmtSig(m, m < 1 ? 2 : 3) + ' M☉'; },
-  fmtLum(l) { return (l >= 1e4 ? this.fmtBig(l, 2) : this.fmtSig(l, 2)) + ' L☉'; },
+  fmtLum(l) { return (l >= 1e6 ? this.fmtBig(l, 2) : this.fmtSig(l, 2)) + ' L☉'; },
   fmtRadius(r) {
     const km = r * PHYS.Rsun / 1000;
     if (km < 1e5) return this.fmtBig(Math.round(km), 3) + ' km';

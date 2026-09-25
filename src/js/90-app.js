@@ -3,13 +3,13 @@
    panels, keyboard shortcuts, deep links and the self-test used during development. */
 
 const App = {
-  sm: null, info: null, timeline: null,
+  sm: null, info: null, timeline: null, core: null,
   hr: null, classification: null, tour: null, quiz: null, compare: null,
   mode: 'levensloop',
   panels: { hr: false, classificatie: false, gallery: false, quiz: false },
   mass: 1, lowZ: false, path: null,
   age: 0, stageIndex: 0, playing: false, speed: Math.pow(10, 8.5),
-  minStageSeconds: 9,
+  minStageSeconds: 7, maxStageSeconds: 32, formationSeconds: 4,
   scenes: {}, lru: [], activeScene: null, activeSceneId: null, activeParams: {},
   state: null, errors: [], _switchToken: 0, _sceneErrors: new Set(), _captionInfo: null,
 
@@ -36,6 +36,7 @@ const App = {
     this.tour = make('TourMode', (C) => new C(this, document.getElementById('tour-card')));
     this.quiz = make('QuizMode', (C) => new C(this, document.getElementById('quiz-body')));
     this.compare = make('CompareMode', (C) => new C(this, document.getElementById('compare-panel')));
+    this.core = make('CorePanel', (C) => new C(document.getElementById('core-panel'), this));
 
     this.bindUI();
     this.buildMassPanel();
@@ -219,6 +220,11 @@ const App = {
     const pre = document.getElementById('mass-presets');
     for (const p of Content.ui.massPresets) pre.append(U.el('button', { type: 'button', 'aria-pressed': 'false', dataset: { m: p.m }, onclick: () => this.setMass(p.m) }, p.label));
     document.getElementById('mass-note').textContent = Content.ui.massNote;
+    document.getElementById('mass-start').addEventListener('click', () => {
+      if (this.mode !== 'levensloop') this.setMode('levensloop', { skipStage: true });
+      this.goToStage(0);
+      this.play();
+    });
   },
   sliderToMass(v) { return Math.pow(10, -2 + (v / 1000) * (Math.log10(150) + 2)); },
   massToSlider(m) { return Math.round(((Math.log10(m) + 2) / (Math.log10(150) + 2)) * 1000); },
@@ -299,6 +305,7 @@ const App = {
     document.getElementById(el).hidden = !open;
     if (open && name === 'classificatie') this.togglePanel('gallery', false);
     if (open && name === 'gallery') this.panels.classificatie && this.togglePanel('classificatie', false);
+    if (name === 'hr') document.body.classList.toggle('hr-open', open);
     if (name === 'hr') { if (open) { this.hr?.onShow?.(); requestAnimationFrame(() => this.hr?.resize?.()); } else this.hr?.onHide?.(); }
     if (name === 'classificatie') { if (open) this.classification?.onShow?.(); else this.classification?.onHide?.(); }
     if (open) document.getElementById(el).querySelector('button, [tabindex]')?.focus({ preventScroll: true });
@@ -326,11 +333,12 @@ const App = {
     if (idx < 0) idx = Math.min(this.stageIndex, this.path.stages.length - 1);
     if (this.mode === 'levensloop') {
       const s = this.path.stages[idx];
-      const needSwitch = s.sceneId !== this.activeSceneId || (s.params?.variant ?? null) !== (this.activeParams?.variant ?? null);
+      const params = this.stageParams(s);
+      const needSwitch = this.sceneFor(s) !== this.activeSceneId || (params.variant ?? null) !== (this.activeParams?.variant ?? null);
       this.stageIndex = idx;
       this.age = s.start + U.clamp(oldF) * s.duration;
       if (needSwitch) this.goToStage(idx, { f: oldF });
-      else { this.activeParams = Object.assign({}, s.params, { mass: m, stage: s, path: this.path, lowZ: this.lowZ }); this.activeScene.params = this.activeParams; this.activeScene.onParams?.(this.activeParams); this.updateCaptionForStage(); }
+      else { this.activeParams = params; this.activeScene.params = params; this.activeScene.onParams?.(params); this.updateCaptionForStage(); this.timeline.setActive(idx, oldF); }
     } else if (this.mode === 'binnenkant' && this.activeSceneId === 'interior') {
       this.goToScene('interior', { variant: this.interiorVariant(m), mass: m });
     }
@@ -349,6 +357,13 @@ const App = {
   },
 
   // ------------------------------------------------------------------ timeline playback
+  /** Scene that shows a stage: its own scene when it exists, otherwise the generic star lab. */
+  sceneFor(s) { return Registry.scenes[s.sceneId] ? s.sceneId : 'starLab'; },
+  stageParams(s) {
+    const own = !!Registry.scenes[s.sceneId];
+    return Object.assign({}, own ? s.params : { stageVariant: s.params?.variant }, { mass: this.mass, stage: s, path: this.path, lowZ: this.lowZ });
+  },
+
   isTimelineMode() { return this.mode === 'levensloop' || (this.mode === 'rondleiding' && this.tour?.usesTimeline !== false); },
 
   goToStage(i, opts = {}) {
@@ -359,8 +374,7 @@ const App = {
     this.stageIndex = i;
     this.age = s.start + U.clamp(opts.f || 0) * s.duration;
     this.state = Evolution.stateAt(this.path, this.age);
-    const params = Object.assign({}, s.params, { mass: this.mass, stage: s, path: this.path, lowZ: this.lowZ });
-    this.goToScene(s.sceneId, params, { instant: opts.instant, fromStage: true, focus: opts.focus });
+    this.goToScene(this.sceneFor(s), this.stageParams(s), { instant: opts.instant, fromStage: true, focus: opts.focus });
     this.timeline.setActive(i, opts.f || 0);
     if (opts.openInfo) this.openInfo(s.infoId);
     bus.emit('stage', { index: i, stage: s });
@@ -398,8 +412,9 @@ const App = {
 
   advance(dt) {
     const st = this.path.stages, s = st[this.stageIndex];
-    const minS = s.minSeconds || this.minStageSeconds;
-    const rate = Math.min(this.speed, s.duration / minS);
+    const minS = s.minSeconds || (s.kind === 'formation' ? this.formationSeconds : this.minStageSeconds);
+    // every stage stays on screen for at least minS and at most maxStageSeconds of real time
+    const rate = U.clamp(this.speed, s.duration / this.maxStageSeconds, s.duration / minS);
     this.effectiveRate = rate;
     this.age += rate * dt;
     if (this.age >= s.start + s.duration) {
@@ -426,9 +441,12 @@ const App = {
       this.hr?.setState?.(state);
       const out = document.getElementById('tl-speed-value');
       if (this.playing && this.effectiveRate && this.effectiveRate < this.speed * 0.98) out.textContent = Content.ui.speedFmt(this.effectiveRate) + ' · fase vertraagd';
-      else if (out.textContent.includes('vertraagd') || !this.playing) out.textContent = Content.ui.speedFmt(this.speed);
+      else if (this.playing && this.effectiveRate && this.effectiveRate > this.speed * 1.02) out.textContent = Content.ui.speedFmt(this.effectiveRate) + ' · ' + Content.ui.lab.phaseFast;
+      else if (out.textContent.includes('·') || !this.playing) out.textContent = Content.ui.speedFmt(this.speed);
+      this.core?.setState(state);
     }
     if (this.mode === 'rondleiding') { try { this.tour?.update?.(dt); } catch (e) { console.error(e); } }
+    if (this.core && this.mode === 'levensloop') { try { this.core.tick(dt); } catch (e) { if (!this._coreErr) { this._coreErr = true; console.error('[core panel]', e); } } }
     const sc = this.activeScene;
     if (sc) {
       sc.time += dt;
@@ -529,14 +547,15 @@ const App = {
   // ------------------------------------------------------------------ caption & info
   updateCaption(id, opts = {}) {
     const meta = Registry.scenes[id]?.meta || {};
-    const inTimeline = this.isTimelineMode() && this.path?.stages[this.stageIndex]?.sceneId === id;
+    const cur = this.path?.stages[this.stageIndex];
+    const inTimeline = this.isTimelineMode() && cur && this.sceneFor(cur) === id;
     if (inTimeline) return this.updateCaptionForStage();
     this.setCaption({ kicker: meta.kicker || '', title: meta.title, infoId: meta.infoId, badges: meta.badges, status: meta.status });
   },
 
   updateCaptionForStage() {
     const s = this.path.stages[this.stageIndex];
-    const meta = Registry.scenes[s.sceneId]?.meta || {};
+    const meta = Registry.scenes[this.sceneFor(s)]?.meta || {};
     const nForm = this.path.stages.filter((x) => x.kind === 'formation').length;
     const kicker = s.kind === 'formation' ? `Stervorming · fase ${this.stageIndex + 1} van ${nForm}` : `${Content.paths?.[this.path.category]?.label || this.path.categoryLabel || 'Evolutie'} · fase ${this.stageIndex + 1} van ${this.path.stages.length}`;
     const info = Content.get(s.infoId);

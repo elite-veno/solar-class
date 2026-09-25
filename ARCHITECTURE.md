@@ -27,6 +27,10 @@ src/js/22-starfactory.js   Star class + StarFactory                            [
 src/js/24-particles.js     ParticleSystems (GPU point sprites + presets)       [core]
 src/js/30-scenemanager.js  Background, LabelLayer, SceneManager, BaseScene     [core]
 src/js/40-evolution.js     Evolution (physical model, paths, HR tracks)        [evolution agent]
+src/js/16-content-fusion.js Content.fusion/nuclides/sources/elements/layers + Content.ui.lab (core panel data)
+src/js/16-content-lab.js   info texts: all stage ids, fusion.*, bron.*, lab.*, hr.diagram, path.* + Content.paths
+src/js/52-scene-starlab.js StarLabScene 'starLab': generic scene for every stage without its own scene
+src/js/68-corepanel.js     CorePanel (#core-panel): live fusion / core temperature / composition / cross-section
 src/js/52-scene-<id>.js    one file per 3D scene (class + Registry.registerScene)
 src/js/60-hrdiagram.js     HRDiagram                                           [hr agent]
 src/js/62-classification.js ClassificationPanel (+ size comparison)            [classification agent]
@@ -75,6 +79,17 @@ Deep-link hash keys (also useful for testing): `scene`, `variant`, `focus`, `mas
 Query `?quality=laag|middel|hoog` and `?reducedMotion=1` override settings.
 
 ---------------------------------------------------------------------------------------------------
+
+### Sterrenlab (implemented)
+- `App.sceneFor(stage)` returns `stage.sceneId` when that scene is registered, otherwise `'starLab'`. The star lab is driven
+  only by the evolution state (`state.visual`, `T`, `R`, `f`), so a timeline stage needs no scene of its own. When a dedicated
+  scene is added later, it takes over that stage automatically.
+- Each stage from `Evolution.getPath()` also carries: `tc` ([[f, K]…] core temperature), `fusion` `{core, shells[], extra[], source}`
+  (process ids = keys of `Content.fusion`, source = key of `Content.sources`), `comp` [start, end] core mass fractions
+  (keys `Evolution.ELEMENTS`), `layers` [[layerKey|'core', r]…] + `burns` [[process, r0, r1]…] (schematic cross-section),
+  `visual` (cloud, collapse, protostar, jets, ttauri, star, bd, nebula, wd, blackDwarf, supernova, failedSN, pairSN, ns, bh, void),
+  `lum` (luminosity class), `hr:false` for stages outside the HR diagram. `stateAt()` adds `Tc`, `fusion`, `comp`, `visual`.
+- Playback: every stage lasts between `minStageSeconds` (formation: `formationSeconds`) and `maxStageSeconds` of real time.
 
 ## 2. Shared-scope rules (the #1 source of integration bugs)
 - One module scope. **Top-level names must be unique across ALL files.** Each file may declare only
